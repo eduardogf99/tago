@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tfg/login_screen.dart';
-import 'package:tfg/profile_screen.dart';
+import 'package:tfg/screens/login_screen.dart';
+import 'package:tfg/screens/profile_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -54,10 +54,11 @@ class AppDrawer extends StatelessWidget {
             leading: const Icon(Icons.logout),
             title: const Text('Cerrar sesión'),
             onTap: () {
-              // Lógica para Cerrar sesión
-              Navigator.push(
+              // Navegación segura: elimina todo el historial al cerrar sesión
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false,
               );
             },
           ),

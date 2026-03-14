@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tfg/login_screen.dart';
+import 'package:tfg/screens/login_screen.dart';
+import 'package:tfg/screens/main_screen.dart';
 
 import 'map_screen.dart';
 
@@ -96,9 +97,10 @@ class _SigninScreenState extends State<SigninScreen> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
+                        Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (context) => const MapScreen()),
+                          MaterialPageRoute(builder: (context) => const MainScreen()),
+                              (route) => false,
                         );
                       },
                       child: const Text('Registrarse'),
@@ -106,9 +108,10 @@ class _SigninScreenState extends State<SigninScreen> {
                     const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
+                        Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginScreen()),
+                              (route) => false,
                         );
                       },
                       child: const Text('Cancelar'),

@@ -18,15 +18,19 @@ class AppNavigationBar extends StatelessWidget {
       destinations: const [
         NavigationDestination(
           icon: Icon(Icons.wifi),
-          label: '',
+          label: 'Wifi',
         ),
         NavigationDestination(
           icon: Icon(Icons.map),
-          label: '',
+          label: 'Mapa',
         ),
         NavigationDestination(
           icon: Icon(Icons.menu_book),
-          label: '',
+          label: 'Libro',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person),
+          label: 'Perfil',
         ),
       ],
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_drawer.dart';
-import 'app_navigation_bar.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/app_navigation_bar.dart';
 
 class TagoScreen extends StatefulWidget {
   const TagoScreen({super.key});
@@ -31,7 +31,7 @@ class _TagoScreenState extends State<TagoScreen> {
       appBar: AppBar(
         title: const Text('TaGo'),
       ),
-      drawer: const AppDrawer(),
+      //drawer: const AppDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

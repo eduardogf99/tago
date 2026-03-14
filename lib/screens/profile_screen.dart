@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'app_drawer.dart';
-import 'app_navigation_bar.dart';
+import 'login_screen.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/app_navigation_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -10,13 +11,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _selectedIndex = 0; // Podrías ajustar esto según dónde quieras que esté en la barra
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: const Text('Perfil'),
       ),
-      drawer: const AppDrawer(),
+      // drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -120,13 +114,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
+            const Divider(),
+
+            // Fila cerrar sesion
+            const SizedBox(height: 20),
+            SizedBox(
+              width: screenWidth* 0.4,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade50,
+                  foregroundColor: Colors.red,
+                ),
+                child: const Text('Cerrar sesión'),
+              ),
+            ),
           ],
         ),
       ),
-      bottomNavigationBar: AppNavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-      ),
+
     );
   }
 }

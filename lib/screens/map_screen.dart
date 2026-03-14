@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_drawer.dart';
-import 'app_navigation_bar.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/app_navigation_bar.dart';
 import 'tago_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -11,13 +11,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  int _selectedIndex = 1; // Seleccionamos el índice 1 (Mapa) por defecto
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +19,7 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         title: const Text('Mapa'),
       ),
-      drawer: const AppDrawer(),
+      // drawer: const AppDrawer(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -44,10 +38,7 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppNavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-      ),
+
     );
   }
 }

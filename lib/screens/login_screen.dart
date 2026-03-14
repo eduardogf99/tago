@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tfg/map_screen.dart';
+import 'package:tfg/screens/main_screen.dart';
+import 'package:tfg/screens/map_screen.dart';
 import 'signin_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -55,9 +56,10 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
+                      Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (context) => const MapScreen()),
+                        MaterialPageRoute(builder: (context) => const MainScreen()),
+                          (route) => false,
                       );
                     },
                     child: const Text('Aceptar'),
