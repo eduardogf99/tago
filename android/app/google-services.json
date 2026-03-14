@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1008380081377",
+    "firebase_url": "https://tago-ec338-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "tago-ec338",
+    "storage_bucket": "tago-ec338.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008380081377:android:4884c86665a9645fedf3a0",
+        "android_client_info": {
+          "package_name": "com.example.tfg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB80tSTRXywKNHjgResqmKf8skCGbO7SJA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
