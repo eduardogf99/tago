@@ -10,13 +10,6 @@ class TagoScreen extends StatefulWidget {
 }
 
 class _TagoScreenState extends State<TagoScreen> {
-  int _selectedIndex = 0; // Ajustar según la posición en la barra de navegación
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +91,7 @@ class _TagoScreenState extends State<TagoScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppNavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-      ),
+
     );
   }
 }
