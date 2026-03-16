@@ -2,7 +2,7 @@ class UserController {
   static bool isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
-
+  // comentario
   static bool isValidPassword(String password) {
     if (password.length < 8) return false;
     bool hasLetter = password.contains(RegExp(r'[a-zA-Z]'));
