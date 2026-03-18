@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
-
-import 'map_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -15,35 +14,67 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   
-  //Aquí se crean los controladores
   final TextEditingController emailController = TextEditingController();
   final TextEditingController userController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController repeatPasswordController = TextEditingController();
+  final TextEditingController birthDateController = TextEditingController();
   
-  //Con esta función es con la que se registran los usuarios en firebase
-  Future<void>registrarUsuario() async{
+  Future<void> registrarUsuario() async {
     String email = emailController.text.trim();
     String usuario = userController.text.trim();
     String password = passwordController.text.trim();
     String repeatPassword = repeatPasswordController.text.trim();
-    
-    if(password != repeatPassword){
-      print("Las contraseñas no coinciden");
+    String birthDate = birthDateController.text.trim();
+
+    if (email.isEmpty || usuario.isEmpty || password.isEmpty || birthDate.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Por favor, rellena todos los campos")),
+      );
+      return;
+    }
+
+    if (password != repeatPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Las contraseñas no coinciden")),
+      );
+      return;
+    }
+
+    if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Debes aceptar los términos y condiciones")),
+      );
       return;
     }
     
-    try{
-      print("antes de firebase");
-      await FirebaseFirestore.instance.collection('usuarios').add({
+    try {
+      // 1. Crear usuario en Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // 2. Guardar datos adicionales en Firestore usando el UID
+      await FirebaseFirestore.instance.collection('usuarios').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
         'email': email,
         'usuario': usuario,
-        'password': password,
+        'fechaNacimiento': birthDate,
+        'fechaCreacion': FieldValue.serverTimestamp(),
       });
-      print("d3espues de firebase");
-      print("Usuario guardado");
-    }catch(e){
-      print("Error $e");
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
     }
   }
 
@@ -70,14 +101,16 @@ class _SigninScreenState extends State<SigninScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        // Implementar login con Google si es necesario
+                      },
                       icon: const Icon(Icons.login),
                       label: const Text('con google'),
                     ),
                     const SizedBox(height: 20),
                     TextField(
-                      controller: emailController, //se añaden aquí los controladores
-                      decoration: InputDecoration(
+                      controller: emailController,
+                      decoration: const InputDecoration(
                         labelText: 'Correo electrónico',
                         border: OutlineInputBorder(),
                       ),
@@ -85,7 +118,7 @@ class _SigninScreenState extends State<SigninScreen> {
                     const SizedBox(height: 15),
                     TextField(
                       controller: userController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Usuario',
                         border: OutlineInputBorder(),
                       ),
@@ -94,26 +127,39 @@ class _SigninScreenState extends State<SigninScreen> {
                     TextField(
                       controller: passwordController,
                       obscureText: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Contraseña',
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    const SizedBox(height: 15),
                     TextField(
                       controller: repeatPasswordController,
                       obscureText: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Repetir Contraseña',
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 15),
-                    const TextField(
-                      decoration: InputDecoration(
+                    TextField(
+                      controller: birthDateController,
+                      decoration: const InputDecoration(
                         labelText: 'Fecha de nacimiento',
                         border: OutlineInputBorder(),
                         suffixIcon: Icon(Icons.calendar_today),
                       ),
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (pickedDate != null) {
+                          birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+                        }
+                      },
                     ),
                     const SizedBox(height: 15),
                     Row(
@@ -133,28 +179,19 @@ class _SigninScreenState extends State<SigninScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MainScreen()),
-                              (route) => false,
-                        );
-                      },
+                      onPressed: registrarUsuario,
                       child: const Text('Registrarse'),
                     ),
                     const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () async{
-                        print("boton pulsado");
-
-                        await registrarUsuario(); //aquí se registra el usuario
+                    TextButton(
+                      onPressed: () {
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginScreen()),
-                              (route) => false,
+                          (route) => false,
                         );
                       },
-                      child: const Text('Cancelar'),
+                      child: const Text('¿Ya tienes cuenta? Inicia sesión'),
                     ),
                   ],
                 ),
