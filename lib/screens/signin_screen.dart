@@ -14,7 +14,7 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _birthDateController = TextEditingController();
+
 
 
   final TextEditingController emailController = TextEditingController();
@@ -27,7 +27,7 @@ class _SigninScreenState extends State<SigninScreen> {
     String email = emailController.text.trim();
     String usuario = userController.text.trim();
     String password = passwordController.text.trim();
-    String repeatPassword = repeatPasswordController.text.trim();
+
     String birthDate = birthDateController.text.trim();
 
 
