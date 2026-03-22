@@ -38,7 +38,7 @@ class _MainScreenState extends State<MainScreen> {
             _selectedIndex = index;
           });
         },
-        // physics: const NeverScrollableScrollPhysics(), esto haria que no se pudiese desplazar ocn el dedo
+         physics: const NeverScrollableScrollPhysics(), //esto haria que no se pudiese desplazar ocn el dedo si lo quitamos
         children: _pages,
       ),
       bottomNavigationBar: AppNavigationBar(
