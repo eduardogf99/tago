@@ -217,6 +217,11 @@ class _SigninScreenState extends State<SigninScreen> {
                           }
                           // Si todo es correcto, llamamos a la función que usa el servicio
                           _ejecutarRegistro();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MainScreen()),
+                                (route) => false,
+                          );
                         }
                       },
                       child: const Text('Registrarse'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tfg/widgets/osm_map_widget.dart';
 import '../widgets/app_navigation_bar.dart';
 import 'tago_screen.dart';
 
@@ -10,34 +11,35 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa'),
       ),
-      // drawer: const AppDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Pantalla de Mapa Vacía'),
-            const SizedBox(height: 20),
-            ElevatedButton(
+      body: Column(
+        children: [
+          // con Expanded el mapa ocupa el espacio disponible
+          const Expanded(
+            child: OSMMapWidget(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const TagoScreen()),
                 );
               },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50), // Botón a ancho completo
+              ),
               child: const Text('Escanear Tago'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-
     );
   }
 }
