@@ -31,8 +31,9 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <!-- metadata API Google Maps -->
-        <meta-data android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBvCMf_RfDGMTWX0BuiDVXbi0GS8Evbqac"/>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
 
     </application>
     <!-- Required to query activities that can process text, see:
