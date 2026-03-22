@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'map_screen.dart';
 import 'profile_screen.dart';
-import '../widgets/app_drawer.dart';
 import '../widgets/app_navigation_bar.dart';
 
 class MainScreen extends StatefulWidget {

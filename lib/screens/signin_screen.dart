@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tfg/services/auth_service.dart'; // Importamos el servicio
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -14,8 +13,9 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-
+  
+  // Instancia del servicio
+  final AuthService _authService = AuthService();
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController userController = TextEditingController();
@@ -23,29 +23,15 @@ class _SigninScreenState extends State<SigninScreen> {
   final TextEditingController repeatPasswordController = TextEditingController();
   final TextEditingController birthDateController = TextEditingController();
 
-  Future<void> registrarUsuario() async {
-    String email = emailController.text.trim();
-    String usuario = userController.text.trim();
-    String password = passwordController.text.trim();
-
-    String birthDate = birthDateController.text.trim();
-
-
+  Future<void> _ejecutarRegistro() async {
     try {
-      // 1. Crear usuario en Firebase Authentication
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+      // Servicio para registrar
+      await _authService.registrarUsuario(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+        usuario: userController.text.trim(),
+        fechaNacimiento: birthDateController.text.trim(),
       );
-
-      // 2. Guardar datos adicionales en Firestore usando el UID
-      await FirebaseFirestore.instance.collection('usuarios').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'email': email,
-        'usuario': usuario,
-        'fechaNacimiento': birthDate,
-        'fechaCreacion': FieldValue.serverTimestamp(),
-      });
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -56,7 +42,7 @@ class _SigninScreenState extends State<SigninScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+        SnackBar(content: Text("Error al registrar: ${e.toString()}")),
       );
     }
   }
@@ -92,15 +78,14 @@ class _SigninScreenState extends State<SigninScreen> {
                       label: const Text('con google'),
                     ),
                     const SizedBox(height: 20),
-                    // Correo
+                    
                     TextFormField(
                       controller: emailController,
                       validator: (value) {
-                        // Abarcamos todas las posibilidades para que sea un correo
                         if (value == null || value.isEmpty) {
                           return 'Por favor, introduce un correo';
                         }
-                        final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$'); //esto indica la estructura de un correo
+                        final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                         if (!emailRegExp.hasMatch(value)) {
                           return 'Introduce un correo electrónico válido';
                         }
@@ -114,7 +99,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    // Usuario
+                    
                     TextFormField(
                       controller: userController,
                       validator: (value) {
@@ -124,7 +109,7 @@ class _SigninScreenState extends State<SigninScreen> {
                           return 'El usuario debe tener al menos 3 caracteres';
                         } else if (value.length > 15) {
                           return 'El usuario no puede tener más de 15 caracteres';
-                        } else if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) { // evita espacios, puntos, comas, guiones o emojis en un nombre de usuario
+                        } else if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
                           return 'El usuario solo puede contener letras y números';
                         }
                         return null;
@@ -135,7 +120,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    // Contraseña
+                    
                     TextFormField(
                       controller: passwordController,
                       validator: (value) {
@@ -157,13 +142,13 @@ class _SigninScreenState extends State<SigninScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    // Repetir contraseña
+                    
                     TextFormField(
                       controller: repeatPasswordController,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor, repite la contraseña';
-                        } else if (value != repeatPasswordController.text) {
+                        } else if (value != passwordController.text) {
                           return 'Las contraseñas no coinciden';
                         }
                         return null;
@@ -175,9 +160,10 @@ class _SigninScreenState extends State<SigninScreen> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    // Fecha de nacimiento
+                    
                     TextFormField(
                       controller: birthDateController,
+                      readOnly: true, // Evita teclado manual
                       decoration: const InputDecoration(
                         labelText: 'Fecha de nacimiento',
                         border: OutlineInputBorder(),
@@ -192,7 +178,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       onTap: () async {
                         DateTime? pickedDate = await showDatePicker(
                           context: context,
-                          initialDate: DateTime.now(),
+                          initialDate: DateTime(2000),
                           firstDate: DateTime(1900),
                           lastDate: DateTime.now(),
                         );
@@ -202,6 +188,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       },
                     ),
                     const SizedBox(height: 15),
+                    
                     Row(
                       children: [
                         Checkbox(
@@ -218,6 +205,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
+                    
                     ElevatedButton(
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
@@ -227,12 +215,8 @@ class _SigninScreenState extends State<SigninScreen> {
                             );
                             return;
                           }
-                          registrarUsuario();
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MainScreen()),
-                                (route) => false,
-                          );
+                          // Si todo es correcto, llamamos a la función que usa el servicio
+                          _ejecutarRegistro();
                         }
                       },
                       child: const Text('Registrarse'),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tfg/screens/main_screen.dart';
+import 'package:tfg/services/auth_service.dart'; // Importamos el servicio
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -15,10 +14,14 @@ class _LoginFormState extends State<LoginForm> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  // Instancia del servicio
+  final AuthService _authService = AuthService();
+
   Future<void> _login() async {
     String input = _userController.text.trim();
     String password = _passwordController.text.trim();
 
+    // Mensajes de validación simples (puedes personalizarlos con tu compañero)
     if (input.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor, rellena todos los campos")),
@@ -31,26 +34,8 @@ class _LoginFormState extends State<LoginForm> {
     });
 
     try {
-      String email = input;
-
-      // Si el input no es un email (no contiene @), buscamos el email asociado al nombre de usuario en Firestore
-      if (!input.contains('@')) {
-        final userQuery = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .where('usuario', isEqualTo: input)
-            .get();
-
-        if (userQuery.docs.isEmpty) {
-          throw 'El nombre de usuario no existe.';
-        }
-        email = userQuery.docs.first.get('email');
-      }
-
-      // Iniciar sesión con Firebase Auth
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // Usamos el servicio para iniciar sesión
+      await _authService.iniciarSesion(input, password);
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -59,19 +44,8 @@ class _LoginFormState extends State<LoginForm> {
           (route) => false,
         );
       }
-    } on FirebaseAuthException catch (e) {
-      String message = "Error al iniciar sesión";
-      if (e.code == 'user-not-found') {
-        message = "No se encontró ningún usuario con ese correo.";
-      } else if (e.code == 'wrong-password') {
-        message = "Contraseña incorrecta.";
-      } else if (e.code == 'invalid-email') {
-        message = "El formato del correo es inválido.";
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
     } catch (e) {
+      // El servicio lanza errores legibles, aquí solo los mostramos
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
