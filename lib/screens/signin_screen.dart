@@ -221,7 +221,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => const MapScreen()),
+                            MaterialPageRoute(builder: (context) => const MainScreen()),
                                 (route) => false,
                           );
 
