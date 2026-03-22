@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
+import 'package:tfg/screens/map_screen.dart';
 import 'package:tfg/services/auth_service.dart'; // Importamos el servicio
 
 class SigninScreen extends StatefulWidget {
@@ -217,6 +218,14 @@ class _SigninScreenState extends State<SigninScreen> {
                           }
                           // Si todo es correcto, llamamos a la función que usa el servicio
                           _ejecutarRegistro();
+
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MapScreen()),
+                                (route) => false,
+                          );
+
+
                         }
                       },
                       child: const Text('Registrarse'),
