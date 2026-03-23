@@ -30,17 +30,29 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-         physics: const NeverScrollableScrollPhysics(), //esto haria que no se pudiese desplazar ocn el dedo si lo quitamos
-        children: _pages,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade50,
+              Colors.blue.shade200,
+            ],
+          ),
+        ),
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          physics: const NeverScrollableScrollPhysics(), //esto haria que no se pudiese desplazar ocn el dedo si lo quitamos
+          children: _pages,
+        ),
       ),
+
       bottomNavigationBar: AppNavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {

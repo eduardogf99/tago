@@ -13,6 +13,7 @@ class AppNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
+      backgroundColor: Colors.blue.shade200,
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
       destinations: const [

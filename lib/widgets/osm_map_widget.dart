@@ -81,10 +81,9 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
           ),
           children: [
             TileLayer(
-              // Nueva URL para el estilo Humanitario
-              urlTemplate: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-              // Es necesario definir los subdominios para este servidor específico
-              subdomains: const ['a', 'b', 'c'],
+              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              retinaMode: RetinaMode.isHighDensity(context),
               userAgentPackageName: 'com.example.tfg',
             ),
             MarkerLayer(
@@ -193,6 +192,41 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
             ),
           ),
         ),
+        // widget que te lleva a donde estas
+        Positioned(
+          top: 75,
+          right: 20,
+            child: GestureDetector(
+              onTap: () {
+                if (_currentLocation != null) {
+                  // Mueve la cámara a tu posición actual
+                  _mapController.move(_currentLocation!, 16.0);
+
+                } else {
+                  // Si aún no hay señal de GPS, mostrar un aviso rápido
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Buscando señal GPS...")),
+                  );
+                }
+              },
+              child: Container(
+                width: 45,
+                height: 45,
+                decoration: const BoxDecoration(
+                  color: Colors.white70,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.my_location, // El icono estándar de "GPS"
+                  color: Colors.grey,
+                  size: 28,
+                ),
+              ),
+            ),
+        )
       ],
     );
   }
