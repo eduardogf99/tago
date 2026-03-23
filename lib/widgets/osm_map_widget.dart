@@ -13,7 +13,7 @@ class OSMMapWidget extends StatefulWidget {
   State<OSMMapWidget> createState() => _OSMMapWidgetState();
 }
 
-class _OSMMapWidgetState extends State<OSMMapWidget> {
+class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   double _currentRotation = 0.0;
 
@@ -43,17 +43,49 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).listen((Position position) {
-      setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-      });
+      if (mounted) {
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+        });
+      }
     });
 
     // pilla la direccion que estamos mirando
     _compassStream = FlutterCompass.events?.listen((CompassEvent event) {
-      setState(() {
-        _heading = event.heading;
-      });
+      if (mounted) {
+        setState(() {
+          _heading = event.heading;
+        });
+      }
     });
+  }
+
+  // mover el mapa con animación
+  void _animatedMapMove(LatLng destLocation, double destZoom, double destRotation) {
+    final camera = _mapController.camera;
+    final latTween = Tween<double>(begin: camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: camera.zoom, end: destZoom);
+    final rotationTween = Tween<double>(begin: camera.rotation, end: destRotation);
+
+    final controller = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+      _mapController.rotate(rotationTween.evaluate(animation));
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
   }
 
   @override
@@ -71,7 +103,7 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: const LatLng(41.6568, -0.8805), // El Pilar
+            initialCenter: const LatLng(41.6568, -0.8805),
             initialZoom: 15.0,
             onPositionChanged: (position, hasGesture) {
               setState(() {
@@ -127,18 +159,13 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
             ),
           ],
         ),
-        // Widget de la Brújula Personalizada
+        // Brújula animada
         Positioned(
           top: 20,
           right: 20,
           child: GestureDetector(
             onTap: () {
-              // reorienta el mapa al norte (0 grados)
-              _mapController.rotate(0);
-              // la brújula también se resetee
-              setState(() {
-                _currentRotation = 0.0;
-              });
+              _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
             },
             child: Container(
               width: 45,
@@ -151,7 +178,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
                 ],
               ),
               child: Transform.rotate(
-
                 angle: _currentRotation * (math.pi / 180),
                 child: Stack(
                   alignment: Alignment.center,
@@ -192,40 +218,33 @@ class _OSMMapWidgetState extends State<OSMMapWidget> {
             ),
           ),
         ),
-        // widget que te lleva a donde estas
+        // Botón GPS animado
         Positioned(
           top: 75,
           right: 20,
-            child: GestureDetector(
-              onTap: () {
-                if (_currentLocation != null) {
-                  // Mueve la cámara a tu posición actual
-                  _mapController.move(_currentLocation!, 16.0);
-
-                } else {
-                  // Si aún no hay señal de GPS, mostrar un aviso rápido
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Buscando señal GPS...")),
-                  );
-                }
-              },
-              child: Container(
-                width: 45,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: Colors.white70,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.my_location, // El icono estándar de "GPS"
-                  color: Colors.grey,
-                  size: 28,
-                ),
+          child: GestureDetector(
+            onTap: () {
+              if (_currentLocation != null) {
+                _animatedMapMove(_currentLocation!, 16.0, _mapController.camera.rotation);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Buscando señal GPS...")),
+                );
+              }
+            },
+            child: Container(
+              width: 45,
+              height: 45,
+              decoration: const BoxDecoration(
+                color: Colors.white70,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                ],
               ),
+              child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
             ),
+          ),
         )
       ],
     );

@@ -23,7 +23,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil'),
+        backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
       ),
+      backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
       body: uid == null 
         ? const Center(child: Text("No hay sesión iniciada"))
         : FutureBuilder<UserModel?>(

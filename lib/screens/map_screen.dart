@@ -14,9 +14,12 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: false,
       appBar: AppBar(
-        title: const Text('Mapa'),
+        title: const Text("TaGo"),
+        backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
       ),
+      backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
       body: Column(
         children: [
           // con Expanded el mapa ocupa el espacio disponible
