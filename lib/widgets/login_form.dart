@@ -13,6 +13,7 @@ class _LoginFormState extends State<LoginForm> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true; // Variable para controlar la visibilidad
 
   // Instancia del servicio
   final AuthService _authService = AuthService();
@@ -79,12 +80,22 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 15),
         TextField(
           controller: _passwordController,
-          obscureText: true,
+          obscureText: _obscurePassword, // Usa la variable de estado
           obscuringCharacter: '*',
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Contraseña',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.lock),
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.lock),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
           ),
         ),
         const SizedBox(height: 20),

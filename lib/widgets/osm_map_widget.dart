@@ -72,11 +72,18 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
     final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
     controller.addListener(() {
+      final rotationValue = rotationTween.evaluate(animation);
+      
       _mapController.move(
         LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
         zoomTween.evaluate(animation),
       );
-      _mapController.rotate(rotationTween.evaluate(animation));
+      _mapController.rotate(rotationValue);
+
+      // Sincronizamos la variable de rotación para que la brújula se mueva en tiempo real
+      setState(() {
+        _currentRotation = rotationValue;
+      });
     });
 
     animation.addStatusListener((status) {

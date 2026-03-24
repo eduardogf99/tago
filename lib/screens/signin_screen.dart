@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
@@ -13,6 +14,8 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true; // Variable para controlar la visibilidad
+  bool _obscureRepeatPassword = true;
   
   // Instancia del servicio
   final AuthService _authService = AuthService();
@@ -135,10 +138,20 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         labelText: 'Contraseña',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -153,10 +166,20 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscureRepeatPassword,
+                      decoration: InputDecoration(
                         labelText: 'Repetir Contraseña',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureRepeatPassword ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureRepeatPassword = !_obscureRepeatPassword;
+                            });
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -175,16 +198,25 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      onTap: () async {
-                        DateTime? pickedDate = await showDatePicker(
+                      onTap: () {
+                        showCupertinoModalPopup(
                           context: context,
-                          initialDate: DateTime(2000),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
+                          builder: (_) => Container(
+                            height: 250,
+                            color: Colors.white,
+                            child: CupertinoDatePicker(
+                              dateOrder: DatePickerDateOrder.dmy,
+                              initialDateTime: DateTime(2000),
+                              minimumYear: 1900,
+                              maximumYear: DateTime.now().year,
+                              mode: CupertinoDatePickerMode.date,
+                              onDateTimeChanged: (val) {
+                                setState(() {
+                                  birthDateController.text = "${val.day}/${val.month}/${val.year}";                                });
+                              },
+                            ),
+                          ),
                         );
-                        if (pickedDate != null) {
-                          birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
-                        }
                       },
                     ),
                     const SizedBox(height: 15),
