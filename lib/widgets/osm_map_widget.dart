@@ -7,13 +7,17 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:async';
 
 class OSMMapWidget extends StatefulWidget {
-  const OSMMapWidget({super.key});
+  final Function(LatLng)? onTap;
+  final LatLng? selectedPosition;
+  final List<Marker>? extraMarkers;
+
+  const OSMMapWidget({super.key, this.onTap, this.selectedPosition, this.extraMarkers});
 
   @override
-  State<OSMMapWidget> createState() => _OSMMapWidgetState();
+  State<OSMMapWidget> createState() => OSMMapWidgetState();
 }
 
-class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixin {
+class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   double _currentRotation = 0.0;
 
@@ -29,7 +33,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
   }
 
   Future<void> _initLocationAndCompass() async {
-    // Verificar y solicitar permisos
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
 
@@ -39,7 +42,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
       if (permission == LocationPermission.denied) return;
     }
 
-    // pilla la ubicación
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).listen((Position position) {
@@ -50,7 +52,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
       }
     });
 
-    // pilla la direccion que estamos mirando
     _compassStream = FlutterCompass.events?.listen((CompassEvent event) {
       if (mounted) {
         setState(() {
@@ -60,7 +61,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
     });
   }
 
-  // mover el mapa con animación
   void _animatedMapMove(LatLng destLocation, double destZoom, double destRotation) {
     final camera = _mapController.camera;
     final latTween = Tween<double>(begin: camera.center.latitude, end: destLocation.latitude);
@@ -73,14 +73,11 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
 
     controller.addListener(() {
       final rotationValue = rotationTween.evaluate(animation);
-      
       _mapController.move(
         LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
         zoomTween.evaluate(animation),
       );
       _mapController.rotate(rotationValue);
-
-      // Sincronizamos la variable de rotación para que la brújula se mueva en tiempo real
       setState(() {
         _currentRotation = rotationValue;
       });
@@ -91,9 +88,10 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
         controller.dispose();
       }
     });
-
     controller.forward();
   }
+
+  LatLng? getCurrentUserLocation() => _currentLocation;
 
   @override
   void dispose() {
@@ -112,6 +110,9 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
           options: MapOptions(
             initialCenter: const LatLng(41.6568, -0.8805),
             initialZoom: 15.0,
+            onTap: (tapPosition, point) {
+              if (widget.onTap != null) widget.onTap!(point);
+            },
             onPositionChanged: (position, hasGesture) {
               setState(() {
                 _currentRotation = _mapController.camera.rotation;
@@ -127,7 +128,19 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
             ),
             MarkerLayer(
               markers: [
-                // MARCADOR DE USUARIO (Ubicación + Dirección)
+                // Marcadores que vienen de Firestore
+                if (widget.extraMarkers != null) ...widget.extraMarkers!,
+                
+                // Marcador de selección manual
+                if (widget.selectedPosition != null)
+                  Marker(
+                    point: widget.selectedPosition!,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
+                  ),
+                
+                // Marcador de usuario
                 if (_currentLocation != null)
                   Marker(
                     point: _currentLocation!,
@@ -136,7 +149,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Haz de luz (dirección)
                         if (_heading != null)
                           Transform.rotate(
                             angle: (_heading! * (math.pi / 180)),
@@ -149,7 +161,6 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
                               ),
                             ),
                           ),
-                        // Círculo de ubicación
                         Container(
                           width: 18,
                           height: 18,
@@ -162,97 +173,93 @@ class _OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMix
                       ],
                     ),
                   ),
+                if (widget.selectedPosition != null)
+                  Marker(
+                    point: widget.selectedPosition!,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
+                  ),
               ],
             ),
           ],
         ),
-        // Brújula animada
         Positioned(
           top: 20,
           right: 20,
-          child: GestureDetector(
-            onTap: () {
-              _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
-            },
-            child: Container(
-              width: 45,
-              height: 45,
-              decoration: const BoxDecoration(
-                color: Colors.white70,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
-              child: Transform.rotate(
-                angle: _currentRotation * (math.pi / 180),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Parte Norte de la aguja (Roja)
-                    Positioned(
-                      top: -3,
-                      child: Icon(
-                        Icons.arrow_drop_up,
-                        color: Colors.red,
-                        size: 35,
-                      ),
-                    ),
-                    // Parte Sur de la aguja (Negra/Gris)
-                    Positioned(
-                      bottom: -3,
-                      child: Transform.rotate(
-                        angle: math.pi,
-                        child: Icon(
-                          Icons.arrow_drop_up,
-                          color: Colors.grey,
-                          size: 35,
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
+                },
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Colors.white70,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Transform.rotate(
+                    angle: _currentRotation * (math.pi / 180),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Parte Norte de la aguja (Roja)
+                        Positioned(
+                          top: -3,
+                          child: Icon(
+                            Icons.arrow_drop_up,
+                            color: Colors.red,
+                            size: 35,
+                          ),
                         ),
-                      ),
+                        // Parte Sur de la aguja (Negra/Gris)
+                        Positioned(
+                          bottom: -3,
+                          child: Transform.rotate(
+                            angle: math.pi,
+                            child: Icon(
+                              Icons.arrow_drop_up,
+                              color: Colors.grey,
+                              size: 35,
+                            ),
+                          ),
+                        ),
+                        // Eje central de la aguja
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(
+                            color: Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
                     ),
-                    // Eje central de la aguja
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        color: Colors.grey,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () {
+                  if (_currentLocation != null) {
+                    _animatedMapMove(_currentLocation!, 16.0, _mapController.camera.rotation);
+                  }
+                },
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Colors.white70,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
+                ),
+              ),
+            ],
           ),
         ),
-        // Botón GPS animado
-        Positioned(
-          top: 75,
-          right: 20,
-          child: GestureDetector(
-            onTap: () {
-              if (_currentLocation != null) {
-                _animatedMapMove(_currentLocation!, 16.0, _mapController.camera.rotation);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Buscando señal GPS...")),
-                );
-              }
-            },
-            child: Container(
-              width: 45,
-              height: 45,
-              decoration: const BoxDecoration(
-                color: Colors.white70,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
-              child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
-            ),
-          ),
-        )
       ],
     );
   }
