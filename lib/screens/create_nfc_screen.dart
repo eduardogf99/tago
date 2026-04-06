@@ -23,14 +23,30 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final ImagePicker _picker = ImagePicker();
   final AuthService _authService = AuthService();
 
+  // Esta llave es la que controla el estado del formulario
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? selectedImage = await _picker.pickImage(source: source);
     if (selectedImage != null) {
+      final File file = File(selectedImage.path);
+      final int sizeInBytes = await file.length();
+      const int maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
+
+      if (sizeInBytes > maxSizeInBytes) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La imagen pesa mas de 10 MB)'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       setState(() {
-        _image = File(selectedImage.path);
+        _image = file;
       });
     }
   }
@@ -65,86 +81,65 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     );
   }
 
-  // Función principal: Escribir NFC y Guardar en DB
   Future<void> _handleCreateTaGo() async {
     final String title = _titleController.text.trim();
     final String description = _descriptionController.text.trim();
 
-    // Generar un ID único para este TaGo
     String tagoId = const Uuid().v4();
 
-    // Mostrar diálogo de escritura NFC
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => const AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             CircularProgressIndicator(),
             SizedBox(height: 20),
             Text("Acerca la pegatina NFC", style: TextStyle(fontWeight: FontWeight.bold)),
             Text("Escribiendo..."),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              NfcManager.instance.stopSession();
-              Navigator.pop(context);
-            },
-            child: const Text("Cancelar"),
-          )
-        ],
       ),
     );
 
     try {
-      // 1. Iniciar sesión NFC para escribir
       bool isAvailable = await NfcManager.instance.isAvailable();
-      if (!isAvailable) throw "NFC no disponible en este dispositivo";
+      if (!isAvailable) throw "NFC no disponible";
 
       await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
         var ndef = Ndef.from(tag);
         if (ndef == null || !ndef.isWritable) {
-          NfcManager.instance.stopSession(errorMessage: "La pegatina no es escribible");
+          NfcManager.instance.stopSession(errorMessage: "No escribible");
           return;
         }
 
-        // Crear el mensaje NDEF con el ID del TaGo
-        NdefMessage message = NdefMessage([
-          NdefRecord.createText(tagoId),
-        ]);
+        NdefMessage message = NdefMessage([NdefRecord.createText(tagoId)]);
 
         try {
           await ndef.write(message);
           await NfcManager.instance.stopSession();
-          
-          // 2. Si la escritura fue bien, guardar en Firestore
           await _saveToFirestore(tagoId, title, description);
-          
+
           if (mounted) {
-            Navigator.pop(context); // Cerrar el diálogo
+            Navigator.pop(context); // Cierra el diálogo
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('NFC escrito y TaGo guardado con éxito')),
+              const SnackBar(content: Text('TaGo creado con éxito')),
             );
-            Navigator.pop(context); // Volver al mapa
+            Navigator.pop(context); // Vuelve al mapa
           }
         } catch (e) {
-          NfcManager.instance.stopSession(errorMessage: "Error al escribir: $e");
+          NfcManager.instance.stopSession(errorMessage: "Error: $e");
         }
       });
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   Future<void> _saveToFirestore(String id, String title, String description) async {
     final userData = await _authService.getUserData();
-    
     await FirebaseFirestore.instance.collection('marcadores').doc(id).set({
       'id': id,
       'titulo': title,
@@ -154,97 +149,98 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'creador': userData?.usuario ?? "Desconocido",
       'fechaCreacion': FieldValue.serverTimestamp(),
       'ultimoEscaneo': FieldValue.serverTimestamp(),
-      // 'imageUrl': Por ahora sin imagen hasta configurar Storage
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crear TaGo (Admin)'),
-      ),
+      appBar: AppBar(title: const Text('Crear TaGo')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ubicación: ${widget.position.latitude.toStringAsFixed(4)}, ${widget.position.longitude.toStringAsFixed(4)}',
-              style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 10),
-            const Text('Título del TaGo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextFormField(
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Por favor, introduce un título';
-                }
-                return null;
-              },
-              controller: _titleController,
-              decoration: const InputDecoration(hintText: 'Escribe un titulo', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 20),
-            const Text('Imagen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Center(
-              child: GestureDetector(
-                onTap: () => _showPicker(context),
-                child: Container(
-                  width: double.infinity,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(12),
+        // AÑADIDO: Widget Form envolviendo el contenido
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ubicación: ${widget.position.latitude.toStringAsFixed(4)}, ${widget.position.longitude.toStringAsFixed(4)}',
+                style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 10),
+              const Text('Título del TaGo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _titleController,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Por favor, introduce un título';
+                  return null;
+                },
+                decoration: const InputDecoration(hintText: 'Escribe un titulo', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 20),
+              const Text('Imagen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Center(
+                child: GestureDetector(
+                  onTap: () => _showPicker(context),
+                  child: Container(
+                    width: 240,
+                    height: 240,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(120),
+                    ),
+                    child: _image != null
+                        ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
+                    )
+                        : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Pulsa para añadir una imagen', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
                   ),
-                  child: _image != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
-                        )
-                      : const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
-                            SizedBox(height: 8),
-                            Text('Pulsa para añadir una imagen', style: TextStyle(color: Colors.grey)),
-                          ],
-                        ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextFormField(
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Por favor, introduce una descripción';
-                }
-                return null;
-              },
-              controller: _descriptionController,
-              maxLines: 5,
-              decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _handleCreateTaGo();
-                  }
+              const SizedBox(height: 20),
+              const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 5,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Por favor, introduce una descripción';
+                  return null;
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, foregroundColor: Colors.white),
-                child: const Text('Crear TaGo', style: TextStyle(fontSize: 16)),
+                decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
               ),
-            ),
-          ],
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Ahora esto sí funcionará correctamente
+                    if (_formKey.currentState!.validate()) {
+                      _handleCreateTaGo();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Crear TaGo', style: TextStyle(fontSize: 16)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
