@@ -7,7 +7,11 @@ class AuthService {
   // Instancias privadas
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  
+  // Hemos añadido el clientId que has pasado del JSON
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: '1008380081377-fb1eln8kvg5dc0t0kvr4ggtuqrvheouh.apps.googleusercontent.com',
+  );
 
   // Stream para vigilar el estado del usuario
   Stream<User?> get userState => _auth.authStateChanges();
@@ -67,7 +71,7 @@ class AuthService {
     try {
       // 1. Iniciar el selector de cuentas de Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // El usuario canceló la selección
+      if (googleUser == null) return null;
 
       // 2. Obtener los detalles de autenticación
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -87,7 +91,7 @@ class AuthService {
           uid: userCredential.user!.uid,
           email: userCredential.user!.email ?? '',
           usuario: userCredential.user!.displayName ?? 'Usuario Google',
-          fechaNacimiento: 'No proporcionada', // Google no da la fecha de nacimiento
+          fechaNacimiento: 'No proporcionada',
           isAdmin: false,
         );
         await _db.collection('usuarios').doc(nuevoUsuario.uid).set(nuevoUsuario.toMap());
@@ -102,7 +106,7 @@ class AuthService {
 
   // Cerrar Sesión
   Future<void> cerrarSesion() async {
-    await _googleSignIn.signOut(); // También cerramos sesión en Google
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
