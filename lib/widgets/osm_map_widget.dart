@@ -128,10 +128,7 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
             ),
             MarkerLayer(
               markers: [
-                // Marcadores que vienen de Firestore
                 if (widget.extraMarkers != null) ...widget.extraMarkers!,
-                
-                // Marcador de selección manual
                 if (widget.selectedPosition != null)
                   Marker(
                     point: widget.selectedPosition!,
@@ -139,8 +136,6 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                     height: 40,
                     child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
                   ),
-                
-                // Marcador de usuario
                 if (_currentLocation != null)
                   Marker(
                     point: _currentLocation!,
@@ -173,13 +168,6 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                       ],
                     ),
                   ),
-                if (widget.selectedPosition != null)
-                  Marker(
-                    point: widget.selectedPosition!,
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
-                  ),
               ],
             ),
           ],
@@ -199,41 +187,30 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                   decoration: const BoxDecoration(
                     color: Colors.white70,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
                   ),
                   child: Transform.rotate(
                     angle: _currentRotation * (math.pi / 180),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Parte Norte de la aguja (Roja)
                         Positioned(
                           top: -3,
-                          child: Icon(
-                            Icons.arrow_drop_up,
-                            color: Colors.red,
-                            size: 35,
-                          ),
+                          child: const Icon(Icons.arrow_drop_up, color: Colors.red, size: 35),
                         ),
-                        // Parte Sur de la aguja (Negra/Gris)
                         Positioned(
                           bottom: -3,
                           child: Transform.rotate(
                             angle: math.pi,
-                            child: Icon(
-                              Icons.arrow_drop_up,
-                              color: Colors.grey,
-                              size: 35,
-                            ),
+                            child: const Icon(Icons.arrow_drop_up, color: Colors.grey, size: 35),
                           ),
                         ),
-                        // Eje central de la aguja
                         Container(
                           width: 4,
                           height: 4,
-                          decoration: const BoxDecoration(
-                            color: Colors.grey,
-                            shape: BoxShape.circle,
-                          ),
+                          decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
                         ),
                       ],
                     ),
@@ -253,6 +230,9 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                   decoration: const BoxDecoration(
                     color: Colors.white70,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
                   ),
                   child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
                 ),

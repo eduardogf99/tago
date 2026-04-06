@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'map_screen.dart';
 import 'profile_screen.dart';
-import 'create_nfc_screen.dart';
+import 'map_admin_screen.dart';
 import '../widgets/app_navigation_bar.dart';
 
 class MainScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _MainScreenState extends State<MainScreen> {
 
     // Generamos la lista de páginas dinámicamente
     final List<Widget> pages = [
-      if (_isAdmin) const CreateNfcScreen(),
+      if (_isAdmin) const MapAdminScreen(),
       const MapScreen(),
       const Center(child: Text('Pantalla Libro')),
       const ProfileScreen(),
