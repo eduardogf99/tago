@@ -23,6 +23,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final ImagePicker _picker = ImagePicker();
   final AuthService _authService = AuthService();
 
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+
   Future<void> _pickImage(ImageSource source) async {
     final XFile? selectedImage = await _picker.pickImage(source: source);
     if (selectedImage != null) {
@@ -66,13 +69,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   Future<void> _handleCreateTaGo() async {
     final String title = _titleController.text.trim();
     final String description = _descriptionController.text.trim();
-
-    if (title.isEmpty || description.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, completa el título y la descripción')),
-      );
-      return;
-    }
 
     // Generar un ID único para este TaGo
     String tagoId = const Uuid().v4();
@@ -180,7 +176,13 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
             const SizedBox(height: 10),
             const Text('Título del TaGo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            TextField(
+            TextFormField(
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, introduce un título';
+                }
+                return null;
+              },
               controller: _titleController,
               decoration: const InputDecoration(hintText: 'Escribe un titulo', border: OutlineInputBorder()),
             ),
@@ -217,7 +219,13 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
             const SizedBox(height: 20),
             const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            TextField(
+            TextFormField(
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, introduce una descripción';
+                }
+                return null;
+              },
               controller: _descriptionController,
               maxLines: 5,
               decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
@@ -227,7 +235,11 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _handleCreateTaGo,
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _handleCreateTaGo();
+                  }
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, foregroundColor: Colors.white),
                 child: const Text('Crear TaGo', style: TextStyle(fontSize: 16)),
               ),

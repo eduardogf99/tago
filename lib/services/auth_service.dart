@@ -15,6 +15,18 @@ class AuthService {
   // Obtener el ID del usuario actual
   String? get currentUid => _auth.currentUser?.uid;
 
+  // Obtener los datos del usuario actual (incluido isAdmin)
+  Future<UserModel?> getUserData() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot doc = await _db.collection('usuarios').doc(user.uid).get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
+      }
+    }
+    return null;
+  }
+
   // Registro con Email y Contraseña
   Future<UserCredential> registrarUsuario({
     required String email,
