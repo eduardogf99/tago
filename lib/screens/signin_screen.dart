@@ -1,8 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
-import 'package:tfg/services/auth_service.dart'; // Importamos el servicio
+import 'package:tfg/services/auth_service.dart';
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -14,10 +13,7 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _obscurePassword = true; // Variable para controlar la visibilidad
-  bool _obscureRepeatPassword = true;
   
-  // Instancia del servicio
   final AuthService _authService = AuthService();
 
   final TextEditingController emailController = TextEditingController();
@@ -28,7 +24,6 @@ class _SigninScreenState extends State<SigninScreen> {
 
   Future<void> _ejecutarRegistro() async {
     try {
-      // Servicio para registrar
       await _authService.registrarUsuario(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -47,6 +42,26 @@ class _SigninScreenState extends State<SigninScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error al registrar: ${e.toString()}")),
       );
+    }
+  }
+
+  // Función para el login con Google
+  Future<void> _loginGoogle() async {
+    try {
+      final user = await _authService.iniciarSesionConGoogle();
+      if (user != null && mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error Google: ${e.toString()}")),
+        );
+      }
     }
   }
 
@@ -74,9 +89,7 @@ class _SigninScreenState extends State<SigninScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        // Implementar login con Google si es necesario
-                      },
+                      onPressed: _loginGoogle, // CONECTADO
                       icon: const Icon(Icons.login),
                       label: const Text('con google'),
                     ),
@@ -138,20 +151,10 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      obscureText: _obscurePassword,
-                      decoration: InputDecoration(
+                      obscureText: true,
+                      decoration: const InputDecoration(
                         labelText: 'Contraseña',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
+                        border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -166,27 +169,17 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      obscureText: _obscureRepeatPassword,
-                      decoration: InputDecoration(
+                      obscureText: true,
+                      decoration: const InputDecoration(
                         labelText: 'Repetir Contraseña',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureRepeatPassword ? Icons.visibility_off : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureRepeatPassword = !_obscureRepeatPassword;
-                            });
-                          },
-                        ),
+                        border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 15),
                     
                     TextFormField(
                       controller: birthDateController,
-                      readOnly: true, // Evita teclado manual
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Fecha de nacimiento',
                         border: OutlineInputBorder(),
@@ -198,25 +191,16 @@ class _SigninScreenState extends State<SigninScreen> {
                         }
                         return null;
                       },
-                      onTap: () {
-                        showCupertinoModalPopup(
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
                           context: context,
-                          builder: (_) => Container(
-                            height: 250,
-                            color: Colors.white,
-                            child: CupertinoDatePicker(
-                              dateOrder: DatePickerDateOrder.dmy,
-                              initialDateTime: DateTime(2000),
-                              minimumYear: 1900,
-                              maximumYear: DateTime.now().year,
-                              mode: CupertinoDatePickerMode.date,
-                              onDateTimeChanged: (val) {
-                                setState(() {
-                                  birthDateController.text = "${val.day}/${val.month}/${val.year}";                                });
-                              },
-                            ),
-                          ),
+                          initialDate: DateTime(2000),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
                         );
+                        if (pickedDate != null) {
+                          birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+                        }
                       },
                     ),
                     const SizedBox(height: 15),
@@ -247,13 +231,7 @@ class _SigninScreenState extends State<SigninScreen> {
                             );
                             return;
                           }
-                          // Si todo es correcto, llamamos a la función que usa el servicio
                           _ejecutarRegistro();
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const MainScreen()),
-                                (route) => false,
-                          );
                         }
                       },
                       child: const Text('Registrarse'),

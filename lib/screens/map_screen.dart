@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:tfg/widgets/osm_map_widget.dart';
-import '../widgets/app_navigation_bar.dart';
 import 'tago_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -20,9 +19,9 @@ class _MapScreenState extends State<MapScreen> {
       extendBodyBehindAppBar: false,
       appBar: AppBar(
         title: const Text("TaGo"),
-        backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
+        backgroundColor: Color.fromRGBO(0, 0, 0, 0),
       ),
-      backgroundColor: new Color.fromRGBO(0, 0, 0, 0),
+      backgroundColor: Color.fromRGBO(0, 0, 0, 0),
       body: Column(
         children: [
           Expanded(

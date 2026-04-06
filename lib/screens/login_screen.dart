@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signin_screen.dart';
+import 'reset_password_screen.dart'; // Importamos la nueva pantalla
 import '../widgets/login_form.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -27,6 +28,23 @@ class LoginScreen extends StatelessWidget {
                     
                     const SizedBox(height: 15),
                     const Divider(),
+                    
+                    // Sección de Restablecer Contraseña
+                    const Text('¿Olvidó su contraseña?'),
+                    TextButton(
+                      onPressed: () {
+                        // Navegación a la pantalla de restablecer
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+                        );
+                      },
+                      child: const Text('Restablecer contraseña'),
+                    ),
+
+                    const Divider(),
+
+                    // Sección de Registro
                     const Text('¿Aún no tienes cuenta?'),
                     TextButton(
                       onPressed: () {
