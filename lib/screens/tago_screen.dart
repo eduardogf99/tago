@@ -1,95 +1,167 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class TagoScreen extends StatefulWidget {
-  const TagoScreen({super.key});
+  final String? tagoId; // ID del marcador en Firestore
+
+  const TagoScreen({super.key, this.tagoId});
 
   @override
   State<TagoScreen> createState() => _TagoScreenState();
 }
 
 class _TagoScreenState extends State<TagoScreen> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _tagoData;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.tagoId != null) {
+      _loadTagoData();
+    } else {
+      // Si no viene ID, quizá deberíamos iniciar el escaneo NFC aquí
+      // Por ahora lo dejamos como cargando o error
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadTagoData() async {
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('marcadores')
+          .doc(widget.tagoId)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          _tagoData = doc.data() as Map<String, dynamic>;
+          _isLoading = false;
+        });
+        
+        // Opcional: Actualizar el campo 'ultimoEscaneo'
+        FirebaseFirestore.instance
+            .collection('marcadores')
+            .doc(widget.tagoId)
+            .update({'ultimoEscaneo': FieldValue.serverTimestamp()});
+            
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error cargando TaGo: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_tagoData == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('TaGo no encontrado')),
+        body: const Center(child: Text('No se ha podido cargar la información de este TaGo.')),
+      );
+    }
+
     double screenWidth = MediaQuery.of(context).size.width;
-    const String loremIpsum = 
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '
-        'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. '
-        'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. '
-        'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.';
+    String titulo = _tagoData!['titulo'] ?? 'Sin título';
+    String descripcion = _tagoData!['descripcion'] ?? 'Sin descripción';
+    String? imagenUrl = _tagoData!['imagenUrl'];
+    String creador = _tagoData!['creador'] ?? 'Desconocido';
+    
+    Timestamp? lastScanTs = _tagoData!['ultimoEscaneo'] as Timestamp?;
+    String lastScan = lastScanTs != null 
+        ? DateFormat('dd/MM/yyyy HH:mm').format(lastScanTs.toDate())
+        : 'Nunca';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TaGo'),
+        title: Text(titulo),
       ),
-      //drawer: const AppDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'El Pilar',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            Center(
+              child: Text(
+                titulo,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
             ),
             const SizedBox(height: 20),
-            // Imagen circular (30% del ancho)
+            // Imagen circular
             Center(
               child: Container(
-                width: screenWidth * 0.3,
-                height: screenWidth * 0.3,
+                width: screenWidth * 0.5, // Un poco más grande para que se vea bien
+                height: screenWidth * 0.5,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.grey.shade300, width: 2),
                 ),
                 child: ClipOval(
-                  child: Image.network(
-                    'https://via.placeholder.com/150',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.image, size: 50),
-                  ),
+                  child: imagenUrl != null && imagenUrl.isNotEmpty
+                      ? Image.network(
+                          imagenUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.image, size: 50),
+                        )
+                      : const Icon(Icons.image, size: 80, color: Colors.grey),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            // Fila con 4 iconos
+            // Fila con 4 iconos (funcionalidad pendiente de implementar)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(onPressed: () {}, icon: const Icon(Icons.thumb_up_alt_outlined)),
                 IconButton(onPressed: () {}, icon: const Icon(Icons.thumb_down_alt_outlined)),
                 IconButton(onPressed: () {}, icon: const Icon(Icons.star_border)),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.share)),
               ],
             ),
             const SizedBox(height: 20),
-            // Texto descriptivo (Lorem Ipsum)
             const Text(
-              loremIpsum,
+              'Descripción',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              descripcion,
               textAlign: TextAlign.justify,
-              style: TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 30),
-            // Información adicional
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Ultima vez escaneado: ',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ),
+            const Divider(),
             const SizedBox(height: 10),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Lo han escaneado 100 usuarios',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+            Text(
+              'Creado por: $creador',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Último escaneo: $lastScan',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ],
         ),
       ),
-
     );
   }
 }

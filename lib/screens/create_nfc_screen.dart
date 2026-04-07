@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
@@ -23,7 +24,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final ImagePicker _picker = ImagePicker();
   final AuthService _authService = AuthService();
 
-  // Esta llave es la que controla el estado del formulario
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   Future<void> _pickImage(ImageSource source) async {
@@ -37,7 +37,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('La imagen pesa mas de 10 MB)'),
+              content: Text('La imagen pesa mas de 10 MB'),
               backgroundColor: Colors.red,
             ),
           );
@@ -84,20 +84,38 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   Future<void> _handleCreateTaGo() async {
     final String title = _titleController.text.trim();
     final String description = _descriptionController.text.trim();
-
     String tagoId = const Uuid().v4();
+
+    // Notificadores para actualizar el texto del diálogo dinámicamente
+    final ValueNotifier<String> statusTitleNotifier = ValueNotifier<String>("Acerca la pegatina NFC");
+    final ValueNotifier<String> statusSubNotifier = ValueNotifier<String>("Esperando etiqueta...");
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
+      builder: (context) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 20),
-            Text("Acerca la pegatina NFC", style: TextStyle(fontWeight: FontWeight.bold)),
-            Text("Escribiendo..."),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            ValueListenableBuilder<String>(
+              valueListenable: statusTitleNotifier,
+              builder: (context, value, _) => Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<String>(
+              valueListenable: statusSubNotifier,
+              builder: (context, value, _) => Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ),
           ],
         ),
       ),
@@ -117,12 +135,20 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         NdefMessage message = NdefMessage([NdefRecord.createText(tagoId)]);
 
         try {
+          // 1. Escribir en el NFC
+          statusSubNotifier.value = "Escribiendo ID en etiqueta...";
           await ndef.write(message);
           await NfcManager.instance.stopSession();
-          await _saveToFirestore(tagoId, title, description);
+          
+          // 2. Cambiar texto cuando empieza la subida a Firebase
+          statusTitleNotifier.value = "Creando TaGo";
+          statusSubNotifier.value = "Subiendo información e imagen...";
+          
+          // Guardamos en Firestore (esto incluye la subida a Storage)
+          await _saveToFirestore(tagoId, title, description, _image);
 
           if (mounted) {
-            Navigator.pop(context); // Cierra el diálogo
+            Navigator.pop(context); // Cierra el diálogo de progreso
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('TaGo creado con éxito')),
             );
@@ -130,20 +156,46 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           }
         } catch (e) {
           NfcManager.instance.stopSession(errorMessage: "Error: $e");
+          if (mounted) {
+            Navigator.pop(context); // Cierra el diálogo si hay error
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+          }
         }
       });
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error NFC: $e')));
     }
   }
 
-  Future<void> _saveToFirestore(String id, String title, String description) async {
+  Future<void> _saveToFirestore(String id, String title, String description, File? imageFile) async {
+    String? imageUrl;
+
+    if (imageFile != null) {
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('marcadores_images')
+            .child('$id.jpg');
+        
+        final SettableMetadata metadata = SettableMetadata(contentType: 'image/jpeg');
+        UploadTask uploadTask = storageRef.putFile(imageFile, metadata);
+        
+        TaskSnapshot snapshot = await uploadTask;
+        imageUrl = await snapshot.ref.getDownloadURL();
+      } catch (e) {
+        debugPrint("ERROR CRÍTICO AL SUBIR IMAGEN: $e");
+        // Se podría lanzar error aquí si quieres detener el proceso si la imagen falla
+      }
+    }
+
     final userData = await _authService.getUserData();
+    
     await FirebaseFirestore.instance.collection('marcadores').doc(id).set({
       'id': id,
       'titulo': title,
       'descripcion': description,
+      'imagenUrl': imageUrl,
       'lat': widget.position.latitude,
       'lng': widget.position.longitude,
       'creador': userData?.usuario ?? "Desconocido",
@@ -158,7 +210,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       appBar: AppBar(title: const Text('Crear TaGo')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        // AÑADIDO: Widget Form envolviendo el contenido
         child: Form(
           key: _formKey,
           child: Column(
@@ -195,17 +246,17 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                     ),
                     child: _image != null
                         ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
-                    )
+                            borderRadius: BorderRadius.circular(120),
+                            child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
+                          )
                         : const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text('Pulsa para añadir una imagen', style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
+                              SizedBox(height: 8),
+                              Text('Pulsa para añadir una imagen', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -227,7 +278,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Ahora esto sí funcionará correctamente
                     if (_formKey.currentState!.validate()) {
                       _handleCreateTaGo();
                     }

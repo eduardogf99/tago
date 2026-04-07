@@ -19,9 +19,9 @@ class _MapScreenState extends State<MapScreen> {
       extendBodyBehindAppBar: false,
       appBar: AppBar(
         title: const Text("TaGo"),
-        backgroundColor: Color.fromRGBO(0, 0, 0, 0),
+        backgroundColor: const Color.fromRGBO(0, 0, 0, 0),
       ),
-      backgroundColor: Color.fromRGBO(0, 0, 0, 0),
+      backgroundColor: const Color.fromRGBO(0, 0, 0, 0),
       body: Column(
         children: [
           Expanded(
@@ -39,16 +39,20 @@ class _MapScreenState extends State<MapScreen> {
                 // Convertimos los documentos de Firestore en una lista de Marcadores para el mapa
                 List<Marker> markers = snapshot.data!.docs.map((doc) {
                   Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+                  String docId = doc.id;
+                  
                   return Marker(
                     point: LatLng(data['lat'], data['lng']),
                     width: 40,
                     height: 40,
                     child: GestureDetector(
                       onTap: () {
-                        // Aquí se abren los datos de este marcador
+                        // Pasamos el ID del marcador a la pantalla TagoScreen
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const TagoScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => TagoScreen(tagoId: docId),
+                          ),
                         );
                       },
                       child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
@@ -66,6 +70,7 @@ class _MapScreenState extends State<MapScreen> {
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: () {
+                // Aquí podrías abrir TagoScreen para escanear un NFC nuevo
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const TagoScreen()),
