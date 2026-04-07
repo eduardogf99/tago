@@ -20,6 +20,7 @@ class OSMMapWidget extends StatefulWidget {
 class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
   double _currentRotation = 0.0;
+  bool _hasCenteredOnUser = false; // Flag para centrar solo una vez al inicio
 
   LatLng? _currentLocation;
   double? _heading;
@@ -46,8 +47,15 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).listen((Position position) {
       if (mounted) {
+        LatLng newLocation = LatLng(position.latitude, position.longitude);
         setState(() {
-          _currentLocation = LatLng(position.latitude, position.longitude);
+          _currentLocation = newLocation;
+          
+          // Si no hay un punto seleccionado y es la primera vez que recibimos ubicación, centramos el mapa
+          if (!_hasCenteredOnUser && widget.selectedPosition == null) {
+            _mapController.move(newLocation, 15.0);
+            _hasCenteredOnUser = true;
+          }
         });
       }
     });
@@ -108,7 +116,8 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: const LatLng(41.6568, -0.8805),
+            // Prioridad: 1. Posición seleccionada, 2. Posición actual, 3. Por defecto (Zaragoza)
+            initialCenter: widget.selectedPosition ?? _currentLocation ?? const LatLng(41.6568, -0.8805),
             initialZoom: 15.0,
             onTap: (tapPosition, point) {
               if (widget.onTap != null) widget.onTap!(point);

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
+import '../widgets/osm_map_widget.dart';
 
 class TagoScreen extends StatefulWidget {
   final String? tagoId; // ID del marcador en Firestore
@@ -81,6 +84,9 @@ class _TagoScreenState extends State<TagoScreen> {
     String descripcion = _tagoData!['descripcion'] ?? 'Sin descripción';
     String? imagenUrl = _tagoData!['imagenUrl'];
     String creador = _tagoData!['creador'] ?? 'Desconocido';
+    double lat = _tagoData!['lat'] ?? 0.0;
+    double lng = _tagoData!['lng'] ?? 0.0;
+    LatLng tagoPosition = LatLng(lat, lng);
     
     Timestamp? lastScanTs = _tagoData!['ultimoEscaneo'] as Timestamp?;
     String lastScan = lastScanTs != null 
@@ -159,6 +165,27 @@ class _TagoScreenState extends State<TagoScreen> {
               'Último escaneo: $lastScan',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
+            const SizedBox(height: 30),
+            // Mapa al final de la pantalla
+            ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: SizedBox(
+                height: 400,
+                width: double.infinity,
+                child: OSMMapWidget(
+                  selectedPosition: tagoPosition,
+                  extraMarkers: [
+                    Marker(
+                      point: tagoPosition,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
