@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../widgets/image_helper.dart';
 
 class CreateNfcScreen extends StatefulWidget {
   final LatLng position;
@@ -21,64 +21,18 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   File? _image;
-  final ImagePicker _picker = ImagePicker();
+  
   final AuthService _authService = AuthService();
-
+  final DatabaseService _dbService = DatabaseService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  Future<void> _pickImage(ImageSource source) async {
-    final XFile? selectedImage = await _picker.pickImage(source: source);
+  Future<void> _pickImage() async {
+    File? selectedImage = await ImageHelper.mostrarSelector(context);
     if (selectedImage != null) {
-      final File file = File(selectedImage.path);
-      final int sizeInBytes = await file.length();
-      const int maxSizeInBytes = 10 * 1024 * 1024; // 10 MB
-
-      if (sizeInBytes > maxSizeInBytes) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('La imagen pesa mas de 10 MB'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
       setState(() {
-        _image = file;
+        _image = selectedImage;
       });
     }
-  }
-
-  void _showPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext bc) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galería'),
-                onTap: () {
-                  _pickImage(ImageSource.gallery);
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Cámara'),
-                onTap: () {
-                  _pickImage(ImageSource.camera);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _handleCreateTaGo() async {
@@ -86,7 +40,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     final String description = _descriptionController.text.trim();
     String tagoId = const Uuid().v4();
 
-    // Notificadores para actualizar el texto del diálogo dinámicamente
     final ValueNotifier<String> statusTitleNotifier = ValueNotifier<String>("Acerca la pegatina NFC");
     final ValueNotifier<String> statusSubNotifier = ValueNotifier<String>("Esperando etiqueta...");
 
@@ -135,20 +88,20 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         NdefMessage message = NdefMessage([NdefRecord.createText(tagoId)]);
 
         try {
-          // 1. Escribir en el NFC
+          // 1. Escribimos en el NFC
           statusSubNotifier.value = "Escribiendo ID en etiqueta...";
           await ndef.write(message);
           await NfcManager.instance.stopSession();
           
-          // 2. Cambiar texto cuando empieza la subida a Firebase
+          // 2. Proceso de subida a Firebase
           statusTitleNotifier.value = "Creando TaGo";
           statusSubNotifier.value = "Subiendo información e imagen...";
           
-          // Guardamos en Firestore (esto incluye la subida a Storage)
+          // --- ESTO ES LO QUE ESTABA FALLANDO: ASEGURAMOS QUE ESPERA LA SUBIDA ---
           await _saveToFirestore(tagoId, title, description, _image);
 
           if (mounted) {
-            Navigator.pop(context); // Cierra el diálogo de progreso
+            Navigator.pop(context); // Cierra diálogo
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('TaGo creado con éxito')),
             );
@@ -157,8 +110,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         } catch (e) {
           NfcManager.instance.stopSession(errorMessage: "Error: $e");
           if (mounted) {
-            Navigator.pop(context); // Cierra el diálogo si hay error
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al crear: $e')));
           }
         }
       });
@@ -171,27 +124,21 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   Future<void> _saveToFirestore(String id, String title, String description, File? imageFile) async {
     String? imageUrl;
 
+    // Aseguramos la subida de imagen y esperamos el resultado
     if (imageFile != null) {
       try {
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('marcadores_images')
-            .child('$id.jpg');
-        
-        final SettableMetadata metadata = SettableMetadata(contentType: 'image/jpeg');
-        UploadTask uploadTask = storageRef.putFile(imageFile, metadata);
-        
-        TaskSnapshot snapshot = await uploadTask;
-        imageUrl = await snapshot.ref.getDownloadURL();
+        imageUrl = await _dbService.subirImagenMarcador(id, imageFile);
+        debugPrint("IMAGEN SUBIDA CON ÉXITO: $imageUrl");
       } catch (e) {
         debugPrint("ERROR CRÍTICO AL SUBIR IMAGEN: $e");
-        // Se podría lanzar error aquí si quieres detener el proceso si la imagen falla
       }
     }
 
-    final userData = await _authService.getUserData();
+    final String? uid = _authService.currentUid;
+    final userData = uid != null ? await _dbService.obtenerUsuario(uid) : null;
     
-    await FirebaseFirestore.instance.collection('marcadores').doc(id).set({
+    // Guardamos el documento final. 'imagenUrl' ya no debería ser null si hubo éxito arriba.
+    await _dbService.crearMarcador(id, {
       'id': id,
       'titulo': title,
       'descripcion': description,
@@ -235,7 +182,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
               const SizedBox(height: 8),
               Center(
                 child: GestureDetector(
-                  onTap: () => _showPicker(context),
+                  onTap: _pickImage,
                   child: Container(
                     width: 240,
                     height: 240,

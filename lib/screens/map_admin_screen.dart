@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart'; // Añadido para manejar ubicación aquí
 import '../widgets/osm_map_widget.dart';
 import 'create_nfc_screen.dart';
 
@@ -12,7 +13,6 @@ class MapAdminScreen extends StatefulWidget {
 
 class _MapAdminScreenState extends State<MapAdminScreen> {
   LatLng? _manualPosition;
-  final GlobalKey<OSMMapWidgetState> _mapKey = GlobalKey<OSMMapWidgetState>();
 
   void _navigateToCreateScreen(LatLng position) {
     Navigator.push(
@@ -23,6 +23,20 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
     );
   }
 
+  // Nueva función para obtener la ubicación actual directamente
+  Future<void> _useCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      _navigateToCreateScreen(LatLng(position.latitude, position.longitude));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo obtener la ubicación actual')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,7 +45,6 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
         children: [
           Expanded(
             child: OSMMapWidget(
-              key: _mapKey,
               selectedPosition: _manualPosition,
               onTap: (point) {
                 setState(() {
@@ -44,18 +57,9 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // Botón 1: Usar posición actual
+                // Botón 1: Usar posición actual corregido
                 ElevatedButton.icon(
-                  onPressed: () {
-                    final userPos = _mapKey.currentState?.getCurrentUserLocation();
-                    if (userPos != null) {
-                      _navigateToCreateScreen(userPos);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Buscando señal GPS...')),
-                      );
-                    }
-                  },
+                  onPressed: _useCurrentLocation,
                   icon: const Icon(Icons.my_location),
                   label: const Text('Usar mi posición actual'),
                   style: ElevatedButton.styleFrom(

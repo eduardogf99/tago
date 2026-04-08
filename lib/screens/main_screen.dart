@@ -16,7 +16,9 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   bool _isAdmin = false;
   bool _isLoading = true;
-  late PageController _pageController;
+  
+  // Eliminamos 'late' e inicializamos con un valor por defecto para evitar el error
+  PageController _pageController = PageController(initialPage: 0);
 
   @override
   void initState() {
@@ -29,9 +31,14 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) {
       setState(() {
         _isAdmin = userData?.isAdmin ?? false;
-        // Si es admin, empezamos en el mapa (índice 1). Si no, en el mapa (índice 0).
+        
+        // Si es admin, lo movemos a su pestaña inicial (índice 1)
         _selectedIndex = _isAdmin ? 1 : 0;
+        
+        // Re-inicializamos el controlador con la página correcta
+        _pageController.dispose(); // Cerramos el anterior
         _pageController = PageController(initialPage: _selectedIndex);
+        
         _isLoading = false;
       });
     }
@@ -39,6 +46,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    // Ya no dará error porque siempre estará inicializado
     _pageController.dispose();
     super.dispose();
   }
@@ -51,7 +59,6 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    // Generamos la lista de páginas dinámicamente
     final List<Widget> pages = [
       if (_isAdmin) const MapAdminScreen(),
       const MapScreen(),
@@ -67,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
             _selectedIndex = index;
           });
         },
-        physics: const NeverScrollableScrollPhysics(), // Evita desajustes de índice al deslizar
+        physics: const NeverScrollableScrollPhysics(),
         children: pages,
       ),
       bottomNavigationBar: AppNavigationBar(

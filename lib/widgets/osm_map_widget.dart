@@ -18,9 +18,9 @@ class OSMMapWidget extends StatefulWidget {
 }
 
 class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixin {
-  final MapController _mapController = MapController();
+  late final MapController _mapController;
   double _currentRotation = 0.0;
-  bool _hasCenteredOnUser = false; // Flag para centrar solo una vez al inicio
+  bool _hasCenteredOnUser = false;
 
   LatLng? _currentLocation;
   double? _heading;
@@ -30,224 +30,130 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     _initLocationAndCompass();
   }
 
   Future<void> _initLocationAndCompass() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    ).listen((Position position) {
-      if (mounted) {
-        LatLng newLocation = LatLng(position.latitude, position.longitude);
-        setState(() {
-          _currentLocation = newLocation;
-          
-          // Si no hay un punto seleccionado y es la primera vez que recibimos ubicación, centramos el mapa
-          if (!_hasCenteredOnUser && widget.selectedPosition == null) {
-            _mapController.move(newLocation, 15.0);
-            _hasCenteredOnUser = true;
-          }
-        });
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
       }
-    });
 
-    _compassStream = FlutterCompass.events?.listen((CompassEvent event) {
+      // Obtener posición inicial rápida
+      Position position = await Geolocator.getCurrentPosition();
       if (mounted) {
         setState(() {
-          _heading = event.heading;
+          _currentLocation = LatLng(position.latitude, position.longitude);
         });
       }
-    });
-  }
 
-  void _animatedMapMove(LatLng destLocation, double destZoom, double destRotation) {
-    final camera = _mapController.camera;
-    final latTween = Tween<double>(begin: camera.center.latitude, end: destLocation.latitude);
-    final lngTween = Tween<double>(begin: camera.center.longitude, end: destLocation.longitude);
-    final zoomTween = Tween<double>(begin: camera.zoom, end: destZoom);
-    final rotationTween = Tween<double>(begin: camera.rotation, end: destRotation);
-
-    final controller = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
-    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
-
-    controller.addListener(() {
-      final rotationValue = rotationTween.evaluate(animation);
-      _mapController.move(
-        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
-        zoomTween.evaluate(animation),
-      );
-      _mapController.rotate(rotationValue);
-      setState(() {
-        _currentRotation = rotationValue;
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
+      ).listen((Position position) {
+        if (mounted) {
+          LatLng newLocation = LatLng(position.latitude, position.longitude);
+          setState(() {
+            _currentLocation = newLocation;
+            if (!_hasCenteredOnUser && widget.selectedPosition == null) {
+              _mapController.move(newLocation, 15.0);
+              _hasCenteredOnUser = true;
+            }
+          });
+        }
       });
-    });
 
-    animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        controller.dispose();
-      }
-    });
-    controller.forward();
+      _compassStream = FlutterCompass.events?.listen((CompassEvent event) {
+        if (mounted) {
+          setState(() {
+            _heading = event.heading;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("Error inicializando ubicación: $e");
+    }
   }
-
-  LatLng? getCurrentUserLocation() => _currentLocation;
 
   @override
   void dispose() {
     _positionStream?.cancel();
     _compassStream?.cancel();
-    _mapController.dispose();
+    // No disponemos el controlador aquí si se usa en un PageView para evitar errores de "disposed"
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: widget.selectedPosition ?? _currentLocation ?? const LatLng(41.6488, -0.8891),
+        initialZoom: 15.0,
+        onTap: (tapPosition, point) {
+          if (widget.onTap != null) widget.onTap!(point);
+        },
+        onPositionChanged: (position, hasGesture) {
+          // Evitamos setState innecesarios si no hay cambio real de rotación
+          if (_currentRotation != _mapController.camera.rotation) {
+            _currentRotation = _mapController.camera.rotation;
+          }
+        },
+      ),
       children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            // Prioridad: 1. Posición seleccionada, 2. Posición actual, 3. Por defecto (Zaragoza)
-            initialCenter: widget.selectedPosition ?? _currentLocation ?? const LatLng(41.6568, -0.8805),
-            initialZoom: 15.0,
-            onTap: (tapPosition, point) {
-              if (widget.onTap != null) widget.onTap!(point);
-            },
-            onPositionChanged: (position, hasGesture) {
-              setState(() {
-                _currentRotation = _mapController.camera.rotation;
-              });
-            },
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              retinaMode: RetinaMode.isHighDensity(context),
-              userAgentPackageName: 'com.example.tfg',
-            ),
-            MarkerLayer(
-              markers: [
-                if (widget.extraMarkers != null) ...widget.extraMarkers!,
-                if (widget.selectedPosition != null)
-                  Marker(
-                    point: widget.selectedPosition!,
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
-                  ),
-                if (_currentLocation != null)
-                  Marker(
-                    point: _currentLocation!,
-                    width: 60,
-                    height: 60,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (_heading != null)
-                          Transform.rotate(
-                            angle: (_heading! * (math.pi / 180)),
-                            child: Transform.translate(
-                              offset: const Offset(0, -13),
-                              child: Icon(
-                                Icons.arrow_drop_up,
-                                size: 50,
-                                color: Colors.blue.withOpacity(0.4),
-                              ),
-                            ),
-                          ),
-                        Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ],
+        TileLayer(
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.example.tfg',
         ),
-        Positioned(
-          top: 20,
-          right: 20,
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
-                },
-                child: Container(
-                  width: 45,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: Colors.white70,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                    ],
-                  ),
-                  child: Transform.rotate(
-                    angle: _currentRotation * (math.pi / 180),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned(
-                          top: -3,
-                          child: const Icon(Icons.arrow_drop_up, color: Colors.red, size: 35),
-                        ),
-                        Positioned(
-                          bottom: -3,
-                          child: Transform.rotate(
-                            angle: math.pi,
-                            child: const Icon(Icons.arrow_drop_up, color: Colors.grey, size: 35),
+        MarkerLayer(
+          markers: [
+            if (widget.extraMarkers != null) ...widget.extraMarkers!,
+            if (widget.selectedPosition != null)
+              Marker(
+                point: widget.selectedPosition!,
+                width: 40,
+                height: 40,
+                child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
+              ),
+            if (_currentLocation != null)
+              Marker(
+                point: _currentLocation!,
+                width: 60,
+                height: 60,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_heading != null)
+                      Transform.rotate(
+                        angle: (_heading! * (math.pi / 180)),
+                        child: Transform.translate(
+                          offset: const Offset(0, -13),
+                          child: Icon(
+                            Icons.arrow_drop_up,
+                            size: 50,
+                            color: Colors.blue.withOpacity(0.4),
                           ),
                         ),
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
-                        ),
-                      ],
+                      ),
+                    Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              GestureDetector(
-                onTap: () {
-                  if (_currentLocation != null) {
-                    _animatedMapMove(_currentLocation!, 16.0, _mapController.camera.rotation);
-                  }
-                },
-                child: Container(
-                  width: 45,
-                  height: 45,
-                  decoration: const BoxDecoration(
-                    color: Colors.white70,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-                    ],
-                  ),
-                  child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ],
     );

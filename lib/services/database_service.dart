@@ -9,6 +9,8 @@ class DatabaseService {
 
   final CollectionReference _usuariosRef = 
       FirebaseFirestore.instance.collection('usuarios');
+  final CollectionReference _marcadoresRef = 
+      FirebaseFirestore.instance.collection('marcadores');
 
   Future<UserModel?> obtenerUsuario(String uid) async {
     try {
@@ -23,16 +25,58 @@ class DatabaseService {
     }
   }
 
-  // Actualizar datos del usuario (nombre, fecha, etc.)
+  // Usamos set con merge para que funcione tanto si el documento existe como si no
   Future<void> actualizarUsuario(String uid, Map<String, dynamic> data) async {
-    await _usuariosRef.doc(uid).update(data);
+    try {
+      await _usuariosRef.doc(uid).set(data, SetOptions(merge: true));
+    } catch (e) {
+      print("Error al actualizar usuario: $e");
+      rethrow;
+    }
   }
 
-  // Subir imagen a Firebase Storage y devolver la URL
+  // Subida de imagen de perfil
   Future<String> subirImagenPerfil(String uid, File imageFile) async {
-    Reference ref = _storage.ref().child('perfiles').child('$uid.jpg');
-    UploadTask uploadTask = ref.putFile(imageFile);
-    TaskSnapshot snapshot = await uploadTask;
-    return await snapshot.ref.getDownloadURL();
+    try {
+      Reference ref = _storage.ref().child('perfiles').child('$uid.jpg');
+      UploadTask uploadTask = ref.putFile(
+        imageFile, 
+        SettableMetadata(contentType: 'image/jpeg')
+      );
+      TaskSnapshot snapshot = await uploadTask;
+      String url = await snapshot.ref.getDownloadURL();
+      print("URL Perfil generada: $url");
+      return url;
+    } catch (e) {
+      print("Error en subirImagenPerfil: $e");
+      rethrow;
+    }
+  }
+
+  // Subida de imagen de marcador (TaGo)
+  Future<String> subirImagenMarcador(String id, File imageFile) async {
+    try {
+      Reference ref = _storage.ref().child('marcadores_images').child('$id.jpg');
+      UploadTask uploadTask = ref.putFile(
+        imageFile, 
+        SettableMetadata(contentType: 'image/jpeg')
+      );
+      TaskSnapshot snapshot = await uploadTask;
+      String url = await snapshot.ref.getDownloadURL();
+      print("URL Marcador generada: $url");
+      return url;
+    } catch (e) {
+      print("Error en subirImagenMarcador: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> crearMarcador(String id, Map<String, dynamic> data) async {
+    try {
+      await _marcadoresRef.doc(id).set(data);
+    } catch (e) {
+      print("Error al crear marcador: $e");
+      rethrow;
+    }
   }
 }

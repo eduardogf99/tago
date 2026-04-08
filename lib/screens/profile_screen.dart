@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:tfg/models/user_model.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'package:tfg/services/database_service.dart';
+import 'package:tfg/widgets/image_helper.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,9 +16,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _dbService = DatabaseService();
-  final ImagePicker _picker = ImagePicker();
 
-  // Función para mostrar el diálogo de edición de texto
   Future<void> _showEditDialog(String label, String currentValue, String field, String uid) async {
     final TextEditingController controller = TextEditingController(text: currentValue);
     
@@ -41,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await _dbService.actualizarUsuario(uid, {field: controller.text.trim()});
                 if (mounted) {
                   Navigator.pop(context);
-                  setState(() {}); // Refrescar pantalla
+                  setState(() {}); // Refrescar para ver los cambios
                 }
               }
             },
@@ -52,7 +50,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Función para editar la fecha de nacimiento con un DatePicker
   Future<void> _editBirthDate(String uid, String currentPath) async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -67,50 +64,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Función para seleccionar imagen
   Future<void> _pickImage(String uid) async {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galería'),
-              onTap: () async {
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                if (image != null) {
-                  _uploadImage(uid, File(image.path));
-                }
-                if (mounted) Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Cámara'),
-              onTap: () async {
-                final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-                if (image != null) {
-                  _uploadImage(uid, File(image.path));
-                }
-                if (mounted) Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+    File? image = await ImageHelper.mostrarSelector(context);
+    if (image != null) {
+      await _uploadImage(uid, image);
+    }
   }
 
   Future<void> _uploadImage(String uid, File file) async {
     try {
+      // 1. Subimos la imagen al Storage y obtenemos la URL
       String downloadUrl = await _dbService.subirImagenPerfil(uid, file);
+      
+      // 2. IMPORTANTE: Guardamos esa URL en el campo 'photoUrl' de Firestore
       await _dbService.actualizarUsuario(uid, {'photoUrl': downloadUrl});
-      setState(() {});
+      
+      // 3. Refrescamos la UI
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto de perfil actualizada con éxito')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al subir imagen: $e')),
+          SnackBar(content: Text('Error al guardar la foto: $e')),
         );
       }
     }
@@ -124,10 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
-      backgroundColor: Colors.white, // O el color que prefieras
       body: uid == null 
         ? const Center(child: Text("No hay sesión iniciada"))
         : FutureBuilder<UserModel?>(
@@ -148,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Imagen de perfil interactiva
+                      // Imagen de perfil con detección de cambios
                       Center(
                         child: GestureDetector(
                           onTap: () => _pickImage(uid),
@@ -160,14 +136,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.grey[300],
                                   shape: BoxShape.circle,
-                                  image: user.photoUrl != null
+                                  image: user.photoUrl != null && user.photoUrl!.isNotEmpty
                                       ? DecorationImage(
                                           image: NetworkImage(user.photoUrl!),
                                           fit: BoxFit.cover,
                                         )
                                       : null,
                                 ),
-                                child: user.photoUrl == null
+                                child: (user.photoUrl == null || user.photoUrl!.isEmpty)
                                     ? const Icon(Icons.person, size: 50)
                                     : null,
                               ),
@@ -189,28 +165,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 30),
 
-                      // Fila Usuario
                       _buildInfoRow('Usuario', user.usuario, () => _showEditDialog('Usuario', user.usuario, 'usuario', uid)),
                       const Divider(),
-
-                      // Fila Correo (Normalmente no se edita así por seguridad, pero dejamos el lápiz si quieres)
                       _buildInfoRow('Correo', user.email, null), 
                       const Divider(),
-
-                      // Fila Fecha de nacimiento
                       _buildInfoRow('Fecha de nacimiento', user.fechaNacimiento, () => _editBirthDate(uid, user.fechaNacimiento)),
                       const Divider(),
-
-                      // Fila ID Amigo (Solo lectura)
                       _buildInfoRow('ID amigo', '${user.uid.substring(0, 8)}...', null),
                       const Divider(),
-
-                      // Placeholder TaGo's
                       _buildInfoRow('TaGo\'s creados', '0', null),
                       const Divider(),
 
                       const SizedBox(height: 20),
-                      
+
                       SizedBox(
                         width: screenWidth * 0.4,
                         child: ElevatedButton(
