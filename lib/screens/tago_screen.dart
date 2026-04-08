@@ -24,8 +24,6 @@ class _TagoScreenState extends State<TagoScreen> {
     if (widget.tagoId != null) {
       _loadTagoData();
     } else {
-      // Si no viene ID, quizá deberíamos iniciar el escaneo NFC aquí
-      // Por ahora lo dejamos como cargando o error
       setState(() {
         _isLoading = false;
       });
@@ -110,10 +108,10 @@ class _TagoScreenState extends State<TagoScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Imagen circular
+            // Imagen circular con animación de carga
             Center(
               child: Container(
-                width: screenWidth * 0.5, // Un poco más grande para que se vea bien
+                width: screenWidth * 0.5,
                 height: screenWidth * 0.5,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -124,8 +122,14 @@ class _TagoScreenState extends State<TagoScreen> {
                       ? Image.network(
                           imagenUrl,
                           fit: BoxFit.cover,
+                          loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.image, size: 50),
+                              const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
                         )
                       : const Icon(Icons.image, size: 80, color: Colors.grey),
                 ),

@@ -5,6 +5,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
+import 'dart:typed_data';
 import '../services/database_service.dart';
 import '../widgets/image_helper.dart';
 
@@ -21,7 +22,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   File? _image;
-  
+
   final AuthService _authService = AuthService();
   final DatabaseService _dbService = DatabaseService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -85,7 +86,16 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           return;
         }
 
-        NdefMessage message = NdefMessage([NdefRecord.createText(tagoId)]);
+        // Creamos el mensaje con el ID y el AAR (Android Application Record)
+        // El AAR asegura que Android abra SIEMPRE nuestra aplicación
+        NdefMessage message = NdefMessage([
+          NdefRecord.createText(tagoId),
+          NdefRecord.createExternal(
+            'android.com',
+            'pkg',
+            Uint8List.fromList('com.example.tfg'.codeUnits), // Tu package name
+          ),
+        ]);
 
         try {
           // 1. Escribimos en el NFC
@@ -250,3 +260,4 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     super.dispose();
   }
 }
+

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:tfg/widgets/osm_map_widget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'tago_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -13,6 +14,98 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  final String? _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+  void _showTagoInfo(BuildContext context, String docId, Map<String, dynamic> data) async {
+    // Comprobamos si el usuario ha escaneado este tago previamente
+    // Buscamos en una subcolección del usuario 'escaneos' o similar.
+
+    bool hasScanned = false;
+    if (_currentUserId != null) {
+      final scanDoc = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(_currentUserId)
+          .collection('escaneos')
+          .doc(docId)
+          .get();
+      hasScanned = scanDoc.exists;
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        String titulo = data['titulo'] ?? 'Sin título';
+        String? imagenUrl = data['imagenUrl'];
+
+        return AlertDialog(
+          title: Text(titulo, textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade300, width: 2),
+                ),
+                child: ClipOval(
+                  child: hasScanned 
+                    ? (imagenUrl != null && imagenUrl.isNotEmpty
+                        ? Image.network(
+                            imagenUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const Center(child: CircularProgressIndicator());
+                            },
+                            errorBuilder: (context, error, stack) => const Icon(Icons.image_not_supported),
+                          )
+                        : const Icon(Icons.image, size: 50, color: Colors.grey))
+                    : const Center(
+                        child: Text(
+                          "???",
+                          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                      ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (hasScanned)
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Cerrar dialog
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TagoScreen(tagoId: docId),
+                      ),
+                    );
+                  },
+                  child: const Text("Ver"),
+                )
+              else
+                const Text(
+                  "Escanea este TaGo para ver su contenido",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,15 +139,7 @@ class _MapScreenState extends State<MapScreen> {
                     width: 40,
                     height: 40,
                     child: GestureDetector(
-                      onTap: () {
-                        // Pasamos el ID del marcador a la pantalla TagoScreen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TagoScreen(tagoId: docId),
-                          ),
-                        );
-                      },
+                      onTap: () => _showTagoInfo(context, docId, data),
                       child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
                     ),
                   );
@@ -64,22 +149,6 @@ class _MapScreenState extends State<MapScreen> {
                   extraMarkers: markers,
                 );
               },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                // Aquí podrías abrir TagoScreen para escanear un NFC nuevo
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const TagoScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Escanear Tago'),
             ),
           ),
         ],
