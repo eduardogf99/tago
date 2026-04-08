@@ -3,6 +3,7 @@ class UserModel {
   final String email;
   final String usuario;
   final String fechaNacimiento;
+  final String? photoUrl; // Nuevo campo para la foto
   final bool isAdmin;
 
   UserModel({
@@ -10,27 +11,28 @@ class UserModel {
     required this.email,
     required this.usuario,
     required this.fechaNacimiento,
-    this.isAdmin = false, // Por defecto es falso
+    this.photoUrl,
+    this.isAdmin = false,
   });
 
-  // Convierte un objeto UserModel a un Mapa para guardarlo en Firestore
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
       'email': email,
       'usuario': usuario,
       'fechaNacimiento': fechaNacimiento,
+      'photoUrl': photoUrl,
       'isAdmin': isAdmin,
     };
   }
 
-  // Crea un objeto UserModel a partir de un documento de Firestore
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       usuario: map['usuario'] ?? '',
       fechaNacimiento: map['fechaNacimiento'] ?? '',
+      photoUrl: map['photoUrl'],
       isAdmin: map['isAdmin'] ?? false,
     );
   }

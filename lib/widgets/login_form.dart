@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/main_screen.dart';
-import 'package:tfg/services/auth_service.dart'; // Importamos el servicio
+import 'package:tfg/services/auth_service.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -13,7 +13,7 @@ class _LoginFormState extends State<LoginForm> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _obscurePassword = true; // Variable para controlar la visibilidad
+  bool _obscurePassword = true;
 
   // Instancia del servicio
   final AuthService _authService = AuthService();
@@ -22,7 +22,6 @@ class _LoginFormState extends State<LoginForm> {
     String input = _userController.text.trim();
     String password = _passwordController.text.trim();
 
-    // Mensajes de validación simples (puedes personalizarlos con tu compañero)
     if (input.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor, rellena todos los campos")),
@@ -46,7 +45,6 @@ class _LoginFormState extends State<LoginForm> {
         );
       }
     } catch (e) {
-      // El servicio lanza errores legibles, aquí solo los mostramos
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
@@ -56,6 +54,28 @@ class _LoginFormState extends State<LoginForm> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loginGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await _authService.iniciarSesionConGoogle();
+      if (user != null && mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error Google: ${e.toString()}")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -80,7 +100,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 15),
         TextField(
           controller: _passwordController,
-          obscureText: _obscurePassword, // Usa la variable de estado
+          obscureText: _obscurePassword,
           obscuringCharacter: '*',
           decoration: InputDecoration(
             labelText: 'Contraseña',
@@ -99,6 +119,22 @@ class _LoginFormState extends State<LoginForm> {
           ),
         ),
         const SizedBox(height: 20),
+        
+        // Botón de Google
+        _isLoading 
+          ? const SizedBox.shrink() 
+          : OutlinedButton.icon(
+              onPressed: _loginGoogle,
+              icon: const Icon(Icons.login, color: Colors.red), 
+              label: const Text('Acceder con Google'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                side: const BorderSide(color: Colors.grey),
+              ),
+            ),
+        
+        const SizedBox(height: 15),
+
         _isLoading
             ? const CircularProgressIndicator()
             : ElevatedButton(

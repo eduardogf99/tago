@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signin_screen.dart';
-import 'reset_password_screen.dart'; // Importamos la nueva pantalla
+import 'reset_password_screen.dart';
 import '../widgets/login_form.dart';
 
 class LoginScreen extends StatelessWidget {
