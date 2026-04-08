@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import 'dart:typed_data';
 import '../services/database_service.dart';
@@ -34,6 +36,23 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         _image = selectedImage;
       });
     }
+  }
+
+  Future<String> _getCountryFromCoords(double lat, double lon) async {
+    try {
+      final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
+      final response = await http.get(url, headers: {
+        'User-Agent': 'TaGo_App_TFG' // OSM requiere un User-Agent identificable
+      });
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['address']?['country'] ?? "Desconocido";
+      }
+    } catch (e) {
+      debugPrint("Error obteniendo país: $e");
+    }
+    return "Desconocido";
   }
 
   Future<void> _handleCreateTaGo() async {
@@ -144,6 +163,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       }
     }
 
+    final String pais = await _getCountryFromCoords(widget.position.latitude, widget.position.longitude);
+
     final String? uid = _authService.currentUid;
     final userData = uid != null ? await _dbService.obtenerUsuario(uid) : null;
     
@@ -155,6 +176,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'imagenUrl': imageUrl,
       'lat': widget.position.latitude,
       'lng': widget.position.longitude,
+      'pais': pais,
       'creador': userData?.usuario ?? "Desconocido",
       'fechaCreacion': FieldValue.serverTimestamp(),
       'ultimoEscaneo': FieldValue.serverTimestamp(),
@@ -260,4 +282,3 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     super.dispose();
   }
 }
-

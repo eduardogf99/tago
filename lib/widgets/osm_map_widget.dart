@@ -80,80 +80,185 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
     }
   }
 
+  void _animatedMapMove(LatLng destLocation, double destZoom, double destRotation) {
+    final camera = _mapController.camera;
+    final latTween = Tween<double>(begin: camera.center.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(begin: camera.center.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: camera.zoom, end: destZoom);
+    final rotationTween = Tween<double>(begin: camera.rotation, end: destRotation);
+
+    final controller = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    final Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      final rotationValue = rotationTween.evaluate(animation);
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+      _mapController.rotate(rotationValue);
+      setState(() {
+        _currentRotation = rotationValue;
+      });
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+    controller.forward();
+  }
+
   @override
   void dispose() {
     _positionStream?.cancel();
     _compassStream?.cancel();
-    // No disponemos el controlador aquí si se usa en un PageView para evitar errores de "disposed"
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: widget.selectedPosition ?? _currentLocation ?? const LatLng(41.6488, -0.8891),
-        initialZoom: 15.0,
-        onTap: (tapPosition, point) {
-          if (widget.onTap != null) widget.onTap!(point);
-        },
-        onPositionChanged: (position, hasGesture) {
-          // Evitamos setState innecesarios si no hay cambio real de rotación
-          if (_currentRotation != _mapController.camera.rotation) {
-            _currentRotation = _mapController.camera.rotation;
-          }
-        },
-      ),
+    return Stack(
       children: [
-        TileLayer(
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
-          userAgentPackageName: 'com.example.tfg',
-        ),
-        MarkerLayer(
-          markers: [
-            if (widget.extraMarkers != null) ...widget.extraMarkers!,
-            if (widget.selectedPosition != null)
-              Marker(
-                point: widget.selectedPosition!,
-                width: 40,
-                height: 40,
-                child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
-              ),
-            if (_currentLocation != null)
-              Marker(
-                point: _currentLocation!,
-                width: 60,
-                height: 60,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (_heading != null)
-                      Transform.rotate(
-                        angle: (_heading! * (math.pi / 180)),
-                        child: Transform.translate(
-                          offset: const Offset(0, -13),
-                          child: Icon(
-                            Icons.arrow_drop_up,
-                            size: 50,
-                            color: Colors.blue.withOpacity(0.4),
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: widget.selectedPosition ?? _currentLocation ?? const LatLng(41.6488, -0.8891),
+            initialZoom: 15.0,
+            onTap: (tapPosition, point) {
+              if (widget.onTap != null) widget.onTap!(point);
+            },
+            onPositionChanged: (position, hasGesture) {
+              if (mounted) {
+                setState(() {
+                  _currentRotation = _mapController.camera.rotation;
+                });
+              }
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              userAgentPackageName: 'com.example.tfg',
+              retinaMode: RetinaMode.isHighDensity(context),
+            ),
+            MarkerLayer(
+              markers: [
+                if (widget.extraMarkers != null) ...widget.extraMarkers!,
+                if (widget.selectedPosition != null)
+                  Marker(
+                    point: widget.selectedPosition!,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
+                  ),
+                if (_currentLocation != null)
+                  Marker(
+                    point: _currentLocation!,
+                    width: 60,
+                    height: 60,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (_heading != null)
+                          Transform.rotate(
+                            angle: (_heading! * (math.pi / 180)),
+                            child: Transform.translate(
+                              offset: const Offset(0, -13),
+                              child: Icon(
+                                Icons.arrow_drop_up,
+                                size: 50,
+                                color: Colors.blue.withOpacity(0.4),
+                              ),
+                            ),
+                          ),
+                        Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
                         ),
-                      ),
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
+              ],
+            ),
+          ],
+        ),
+        Positioned(
+          top: 20,
+          right: 20,
+          child: Column(
+            children: [
+              // Brújula para resetear rotación
+              GestureDetector(
+                onTap: () {
+                  _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
+                },
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Colors.white70,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: Transform.rotate(
+                    angle: _currentRotation * (math.pi / 180),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          top: -3,
+                          child: const Icon(Icons.arrow_drop_up, color: Colors.red, size: 35),
+                        ),
+                        Positioned(
+                          bottom: -3,
+                          child: Transform.rotate(
+                            angle: math.pi,
+                            child: const Icon(Icons.arrow_drop_up, color: Colors.grey, size: 35),
+                          ),
+                        ),
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-          ],
+              const SizedBox(height: 10),
+              // Botón de mi ubicación
+              GestureDetector(
+                onTap: () {
+                  if (_currentLocation != null) {
+                    _animatedMapMove(_currentLocation!, 16.0, _mapController.camera.rotation);
+                  }
+                },
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: const BoxDecoration(
+                    color: Colors.white70,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: const Icon(Icons.my_location, color: Colors.grey, size: 28),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

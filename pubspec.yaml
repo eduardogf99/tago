@@ -37,6 +37,7 @@ dependencies:
   nfc_manager: ^3.0.0
   image_picker: ^1.0.7
   uuid: ^4.3.3
+  http: ^1.2.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
