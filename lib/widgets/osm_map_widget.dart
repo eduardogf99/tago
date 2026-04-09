@@ -146,14 +146,6 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
             ),
             MarkerLayer(
               markers: [
-                if (widget.extraMarkers != null) ...widget.extraMarkers!,
-                if (widget.selectedPosition != null)
-                  Marker(
-                    point: widget.selectedPosition!,
-                    width: 40,
-                    height: 40,
-                    child: const Icon(Icons.location_pin, color: Colors.purple, size: 40),
-                  ),
                 if (_currentLocation != null)
                   Marker(
                     point: _currentLocation!,
@@ -185,6 +177,16 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                         ),
                       ],
                     ),
+                  ),
+                if (widget.extraMarkers != null) ...widget.extraMarkers!,
+                if (widget.selectedPosition != null)
+                  Marker(
+                    point: widget.selectedPosition!,
+                    width: 40,
+                    height: 40,
+                    rotate: true,
+                    alignment: Alignment.topCenter,
+                    child: const Icon(Icons.location_on_rounded, color: Colors.purple, size: 40),
                   ),
               ],
             ),

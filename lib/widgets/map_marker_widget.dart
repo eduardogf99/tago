@@ -27,7 +27,7 @@ class _MapMarkerWidgetState extends State<MapMarkerWidget> {
         children: [
           // Icono del marcador
           const Icon(
-            Icons.location_on,
+            Icons.location_on_rounded,
             color: Colors.red,
             size: 40,
           ),

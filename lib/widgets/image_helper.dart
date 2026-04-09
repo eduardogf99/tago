@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class ImageHelper {
   static final ImagePicker _picker = ImagePicker();
@@ -45,10 +48,32 @@ class ImageHelper {
   }
 
   static Future<File?> _procesarImagen(BuildContext context, ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      // Bajamos un poco la calidad inicial desde el picker
+      imageQuality: 85, 
+    );
+    
     if (image == null) return null;
 
-    final File file = File(image.path);
+    // Preparamos la ruta para el archivo comprimido
+    final String targetPath = p.join(
+      (await getTemporaryDirectory()).path,
+      'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+    );
+
+    // Compresión real: limitamos dimensiones a 1024px y calidad al 70%
+    XFile? compressedXFile = await FlutterImageCompress.compressAndGetFile(
+      image.path,
+      targetPath,
+      quality: 70,
+      minWidth: 1024,
+      minHeight: 1024,
+    );
+
+    if (compressedXFile == null) return File(image.path);
+
+    final File file = File(compressedXFile.path);
     
     // Validación de tamaño (10 MB)
     final int sizeInBytes = await file.length();

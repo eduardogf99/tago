@@ -138,9 +138,11 @@ class _MapScreenState extends State<MapScreen> {
                     point: LatLng(data['lat'], data['lng']),
                     width: 40,
                     height: 40,
+                    rotate: true,
+                    alignment: Alignment.topCenter,
                     child: GestureDetector(
                       onTap: () => _showTagoInfo(context, docId, data),
-                      child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
+                      child: const Icon(Icons.location_on_rounded, color: Colors.blue, size: 40),
                     ),
                   );
                 }).toList();
