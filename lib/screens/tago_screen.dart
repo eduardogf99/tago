@@ -178,14 +178,6 @@ class _TagoScreenState extends State<TagoScreen> {
                 width: double.infinity,
                 child: OSMMapWidget(
                   selectedPosition: tagoPosition,
-                  extraMarkers: [
-                    Marker(
-                      point: tagoPosition,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(Icons.location_on, color: Colors.blue, size: 40),
-                    ),
-                  ],
                 ),
               ),
             ),
