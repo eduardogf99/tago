@@ -38,21 +38,50 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     }
   }
 
-  Future<String> _getCountryFromCoords(double lat, double lon) async {
+  // Mejorado: Una sola función para obtener toda la ubicación
+  Future<Map<String, String>> _getLocationData(double lat, double lon) async {
     try {
       final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
       final response = await http.get(url, headers: {
-        'User-Agent': 'TaGo_App_TFG' // OSM requiere un User-Agent identificable
+        'User-Agent': 'TaGo_App_TFG'
       });
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['address']?['country'] ?? "Desconocido";
+        final address = data['address'] as Map<String, dynamic>?;
+
+        if (address != null) {
+          String municipio = address['city'] ??
+                          address['town'] ?? 
+                          address['village'] ?? 
+                          address['municipality'] ?? 
+                          "Desconocido";
+          
+          String provincia = address['province'] ?? 
+                             address['county'] ?? 
+                             "Desconocido";
+
+          String comunidad = address['state'] ?? "Desconocido";
+                             
+          String pais = address['country'] ?? "Desconocido";
+
+          return {
+            'pais': pais,
+            'comunidad': comunidad,
+            'provincia': provincia,
+            'municipio': municipio,
+          };
+        }
       }
     } catch (e) {
-      debugPrint("Error obteniendo país: $e");
+      debugPrint("Error obteniendo datos de ubicación: $e");
     }
-    return "Desconocido";
+    return {
+      'pais': "Desconocido",
+      'comunidad': "Desconocido",
+      'provincia': "Desconocido",
+      'municipio': "Desconocido",
+    };
   }
 
   Future<void> _handleCreateTaGo() async {
@@ -112,7 +141,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           NdefRecord.createExternal(
             'android.com',
             'pkg',
-            Uint8List.fromList('com.example.tfg'.codeUnits), // Tu package name
+            Uint8List.fromList('com.example.tfg'.codeUnits),
           ),
         ]);
 
@@ -126,7 +155,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           statusTitleNotifier.value = "Creando TaGo";
           statusSubNotifier.value = "Subiendo información e imagen...";
           
-          // --- ESTO ES LO QUE ESTABA FALLANDO: ASEGURAMOS QUE ESPERA LA SUBIDA ---
+          // --- ASEGURAMOS QUE ESPERA LA SUBIDA ---
           await _saveToFirestore(tagoId, title, description, _image);
 
           if (mounted) {
@@ -163,12 +192,12 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       }
     }
 
-    final String pais = await _getCountryFromCoords(widget.position.latitude, widget.position.longitude);
+    // Obtenemos todos los datos geográficos en una sola llamada
+    final locationData = await _getLocationData(widget.position.latitude, widget.position.longitude);
 
     final String? uid = _authService.currentUid;
     final userData = uid != null ? await _dbService.obtenerUsuario(uid) : null;
     
-    // Guardamos el documento final. 'imagenUrl' ya no debería ser null si hubo éxito arriba.
     await _dbService.crearMarcador(id, {
       'id': id,
       'titulo': title,
@@ -176,7 +205,10 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'imagenUrl': imageUrl,
       'lat': widget.position.latitude,
       'lng': widget.position.longitude,
-      'pais': pais,
+      'pais': locationData['pais'],
+      'comunidad': locationData['comunidad'],
+      'provincia': locationData['provincia'],
+      'localidad': locationData['municipio'],
       'creador': userData?.usuario ?? "Desconocido",
       'fechaCreacion': FieldValue.serverTimestamp(),
       'ultimoEscaneo': FieldValue.serverTimestamp(),

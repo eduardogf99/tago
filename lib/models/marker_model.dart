@@ -11,7 +11,7 @@ class MapMarkerModel {
     required this.position,
   });
 
-  // Convierte un objeto UserModel a un Mapa para guardarlo en Firestore
+  // Convierte el objeto a un mapa para ser almacenado en Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -20,7 +20,7 @@ class MapMarkerModel {
     };
   }
 
-  // Crea un objeto UserModel a partir de un documento de Firestore
+  // Convierte el mapa recuperado de Firestore a un objeto
   factory MapMarkerModel.fromMap(Map<String, dynamic> map) {
     return MapMarkerModel(
       id: map['id'] ?? '',
