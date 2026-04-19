@@ -23,6 +23,7 @@ class CreateNfcScreen extends StatefulWidget {
 class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _hintController = TextEditingController();
   File? _image;
 
   final AuthService _authService = AuthService();
@@ -87,6 +88,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   Future<void> _handleCreateTaGo() async {
     final String title = _titleController.text.trim();
     final String description = _descriptionController.text.trim();
+    final String hint = _hintController.text.trim();
     String tagoId = const Uuid().v4();
 
     final ValueNotifier<String> statusTitleNotifier = ValueNotifier<String>("Acerca la pegatina NFC");
@@ -156,7 +158,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           statusSubNotifier.value = "Subiendo información e imagen...";
           
           // --- ASEGURAMOS QUE ESPERA LA SUBIDA ---
-          await _saveToFirestore(tagoId, title, description, _image);
+          await _saveToFirestore(tagoId, title, description, hint, _image);
 
           if (mounted) {
             Navigator.pop(context); // Cierra diálogo
@@ -179,7 +181,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     }
   }
 
-  Future<void> _saveToFirestore(String id, String title, String description, File? imageFile) async {
+  Future<void> _saveToFirestore(String id, String title, String description, String hint, File? imageFile) async {
     String? imageUrl;
 
     // Aseguramos la subida de imagen y esperamos el resultado
@@ -202,6 +204,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'id': id,
       'titulo': title,
       'descripcion': description,
+      'pista': hint,
       'imagenUrl': imageUrl,
       'lat': widget.position.latitude,
       'lng': widget.position.longitude,
@@ -283,6 +286,18 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 },
                 decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
               ),
+              const SizedBox(height: 20),
+              const Text('Pista', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _hintController,
+                maxLines: 2,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Por favor, introduce una pista';
+                  return null;
+                },
+                decoration: const InputDecoration(hintText: 'Escribe una pista para encontrarlo', border: OutlineInputBorder()),
+              ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -311,6 +326,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _hintController.dispose();
     super.dispose();
   }
 }

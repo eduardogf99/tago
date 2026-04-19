@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tfg/screens/manage_admins_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'map_screen.dart';
 import 'profile_screen.dart';
@@ -63,6 +64,7 @@ class _MainScreenState extends State<MainScreen> {
       if (_isAdmin) const MapAdminScreen(),
       const MapScreen(),
       const Center(child: Text('Pantalla Libro')),
+      if (_isAdmin) const ManageAdminsScreen(),
       const ProfileScreen(),
     ];
 

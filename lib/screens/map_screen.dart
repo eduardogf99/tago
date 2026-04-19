@@ -38,69 +38,104 @@ class _MapScreenState extends State<MapScreen> {
       builder: (context) {
         String titulo = data['titulo'] ?? 'Sin título';
         String? imagenUrl = data['imagenUrl'];
+        String pista = data['pista'] ?? 'No hay pistas disponibles.';
+        bool mostrarPista = false;
 
-        return AlertDialog(
-          title: Text(titulo, textAlign: TextAlign.center),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 2),
-                ),
-                child: ClipOval(
-                  child: hasScanned 
-                    ? (imagenUrl != null && imagenUrl.isNotEmpty
-                        ? Image.network(
-                            imagenUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return const Center(child: CircularProgressIndicator());
-                            },
-                            errorBuilder: (context, error, stack) => const Icon(Icons.image_not_supported),
-                          )
-                        : const Icon(Icons.image, size: 50, color: Colors.grey))
-                    : const Center(
-                        child: Text(
-                          "???",
-                          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.grey),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(titulo, textAlign: TextAlign.center),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300, width: 2),
+                    ),
+                    child: ClipOval(
+                      child: hasScanned 
+                        ? (imagenUrl != null && imagenUrl.isNotEmpty
+                            ? Image.network(
+                                imagenUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const Center(child: CircularProgressIndicator());
+                                },
+                                errorBuilder: (context, error, stack) => const Icon(Icons.image_not_supported),
+                              )
+                            : const Icon(Icons.image, size: 50, color: Colors.grey))
+                        : const Center(
+                            child: Text(
+                              "???",
+                              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (hasScanned)
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context); 
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TagoScreen(tagoId: docId),
+                          ),
+                        );
+                      },
+                      child: const Text("Ver"),
+                    )
+                  else
+                    Column(
+                      children: [
+                        const Text(
+                          "Escanea este TaGo para ver su contenido",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
                         ),
-                      ),
-                ),
+                        const SizedBox(height: 15),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Pista", style: TextStyle(fontWeight: FontWeight.bold)),
+                            Switch(
+                              value: mostrarPista,
+                              onChanged: (value) {
+                                setState(() {
+                                  mostrarPista = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        if (mostrarPista)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              pista,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.deepPurple),
+                            ),
+                          ),
+                      ],
+                    ),
+                ],
               ),
-              const SizedBox(height: 20),
-              if (hasScanned)
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Cerrar dialog
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TagoScreen(tagoId: docId),
-                      ),
-                    );
-                  },
-                  child: const Text("Ver"),
-                )
-              else
-                const Text(
-                  "Escanea este TaGo para ver su contenido",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cerrar"),
                 ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar"),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

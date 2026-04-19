@@ -33,6 +33,11 @@ class AppNavigationBar extends StatelessWidget {
           icon: Icon(Icons.menu_book),
           label: '',
         ),
+        if(isAdmin)
+          const NavigationDestination(
+            icon: Icon(Icons.rebase_edit),
+            label: '',
+          ),
         const NavigationDestination(
           icon: Icon(Icons.person),
           label: '',
