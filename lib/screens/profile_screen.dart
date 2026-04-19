@@ -35,8 +35,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await _dbService.actualizarUsuario(uid, {field: controller.text.trim()});
+              String newValue = controller.text.trim();
+              if (newValue.isNotEmpty) {
+                // Si estamos editando el usuario y ha cambiado, comprobamos si ya existe
+                if (field == 'usuario' && newValue != currentValue) {
+                  bool exists = await _authService.usuarioExiste(newValue);
+                  if (exists) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('El nombre de usuario ya está en uso'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                    return;
+                  }
+                }
+
+                await _dbService.actualizarUsuario(uid, {field: newValue});
                 if (mounted) {
                   Navigator.pop(context);
                   setState(() {}); // Refrescar para ver los cambios

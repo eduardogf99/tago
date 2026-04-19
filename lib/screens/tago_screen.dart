@@ -17,6 +17,7 @@ class TagoScreen extends StatefulWidget {
 class _TagoScreenState extends State<TagoScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _tagoData;
+  String _creadorNombre = 'Cargando...';
 
   @override
   void initState() {
@@ -38,12 +39,41 @@ class _TagoScreenState extends State<TagoScreen> {
           .get();
 
       if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        
         setState(() {
-          _tagoData = doc.data() as Map<String, dynamic>;
+          _tagoData = data;
+        });
+
+        // Obtener el nombre del creador usando su UID
+        final String? creadorId = data['creadorId'];
+        if (creadorId != null && creadorId.isNotEmpty) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(creadorId)
+              .get();
+          
+          if (userDoc.exists) {
+            setState(() {
+              _creadorNombre = (userDoc.data() as Map<String, dynamic>)['usuario'] ?? 'Desconocido';
+            });
+          } else {
+            setState(() {
+              _creadorNombre = 'Usuario no encontrado';
+            });
+          }
+        } else {
+          // Retrocompatibilidad por si aún hay marcadores con el campo 'creador' antiguo
+          setState(() {
+            _creadorNombre = data['creador'] ?? 'Desconocido';
+          });
+        }
+
+        setState(() {
           _isLoading = false;
         });
         
-        // Opcional: Actualizar el campo 'ultimoEscaneo'
+        // Actualizar el campo 'ultimoEscaneo'
         FirebaseFirestore.instance
             .collection('marcadores')
             .doc(widget.tagoId)
@@ -81,7 +111,6 @@ class _TagoScreenState extends State<TagoScreen> {
     String titulo = _tagoData!['titulo'] ?? 'Sin título';
     String descripcion = _tagoData!['descripcion'] ?? 'Sin descripción';
     String? imagenUrl = _tagoData!['imagenUrl'];
-    String creador = _tagoData!['creador'] ?? 'Desconocido';
     double lat = _tagoData!['lat'] ?? 0.0;
     double lng = _tagoData!['lng'] ?? 0.0;
     LatLng tagoPosition = LatLng(lat, lng);
@@ -161,7 +190,7 @@ class _TagoScreenState extends State<TagoScreen> {
             const Divider(),
             const SizedBox(height: 10),
             Text(
-              'Creado por: $creador',
+              'Creado por: $_creadorNombre',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey),
             ),
             const SizedBox(height: 5),

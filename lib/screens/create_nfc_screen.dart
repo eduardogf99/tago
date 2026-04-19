@@ -198,7 +198,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     final locationData = await _getLocationData(widget.position.latitude, widget.position.longitude);
 
     final String? uid = _authService.currentUid;
-    final userData = uid != null ? await _dbService.obtenerUsuario(uid) : null;
     
     await _dbService.crearMarcador(id, {
       'id': id,
@@ -212,7 +211,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'comunidad': locationData['comunidad'],
       'provincia': locationData['provincia'],
       'localidad': locationData['municipio'],
-      'creador': userData?.usuario ?? "Desconocido",
+      'creadorId': uid,
       'fechaCreacion': FieldValue.serverTimestamp(),
       'ultimoEscaneo': FieldValue.serverTimestamp(),
     });

@@ -61,10 +61,9 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() {
-          _searchQuery = value.trim().toLowerCase(); // Búsqueda siempre en minúsculas
+          _searchQuery = value.trim().toLowerCase();
         });
         
-        // Si tras filtrar localmente no hay resultados, forzamos carga adicional
         if (_searchQuery.isNotEmpty) {
           if (_isUsuariosTab) {
             if (_hasMoreUsuarios && _getFilteredUsuarios().length < 5) _fetchUsuarios();
@@ -95,7 +94,6 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     final String? currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     try {
-      // Ordenamos para que la paginación sea consistente
       Query query = FirebaseFirestore.instance.collection('usuarios').orderBy('usuario');
 
       if (_lastUsuarioSnapshot != null) {
@@ -126,7 +124,6 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
           }
         });
 
-        // LÓGICA DE BÚSQUEDA AUTOMÁTICA: Si estamos buscando y no hay match en este lote, cargamos el siguiente
         if (_searchQuery.isNotEmpty && !matchInThisBatch && _hasMoreUsuarios) {
           _fetchUsuarios();
         }
@@ -145,13 +142,10 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     if (currentUid == null) return;
 
     try {
-      final userData = await _dbService.obtenerUsuario(currentUid);
-      final String miNombre = userData?.usuario ?? "Desconocido";
-
-      // Consulta simplificada para evitar errores de índice
+      // AHORA filtramos por creadorId (el UID del usuario logueado)
       Query query = FirebaseFirestore.instance
           .collection('marcadores')
-          .where('creador', isEqualTo: miNombre);
+          .where('creadorId', isEqualTo: currentUid);
 
       if (_lastTagoSnapshot != null) {
         query = query.startAfterDocument(_lastTagoSnapshot!);
@@ -179,7 +173,6 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
           }
         });
 
-        // Si estamos buscando y no hay match en este lote, cargamos el siguiente
         if (_searchQuery.isNotEmpty && !matchInThisBatch && _hasMoreTagos) {
           _fetchTagos();
         }
@@ -343,6 +336,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
   void _editTagoDialog(String id, Map<String, dynamic> data) {
     final titleController = TextEditingController(text: data['titulo']);
     final descController = TextEditingController(text: data['descripcion']);
+    final hintController = TextEditingController(text: data['pista']);
     File? newImage;
     String? currentImageUrl = data['imagenUrl'];
 
@@ -369,6 +363,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
                 ),
                 TextField(controller: titleController, decoration: const InputDecoration(labelText: "Título")),
                 TextField(controller: descController, decoration: const InputDecoration(labelText: "Descripción"), maxLines: 3),
+                TextField(controller: hintController, decoration: const InputDecoration(labelText: "Pista"), maxLines: 2),
               ],
             ),
           ),
@@ -381,6 +376,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
                 await FirebaseFirestore.instance.collection('marcadores').doc(id).update({
                   'titulo': titleController.text,
                   'descripcion': descController.text,
+                  'pista': hintController.text,
                   'imagenUrl': finalImageUrl,
                 });
                 setState(() {
@@ -388,6 +384,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
                   if (realIndex != -1) {
                     _tagosData[realIndex]['titulo'] = titleController.text;
                     _tagosData[realIndex]['descripcion'] = descController.text;
+                    _tagosData[realIndex]['pista'] = hintController.text;
                     _tagosData[realIndex]['imagenUrl'] = finalImageUrl;
                   }
                 });

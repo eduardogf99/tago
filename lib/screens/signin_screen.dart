@@ -12,6 +12,8 @@ class SigninScreen extends StatefulWidget {
 
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
+  bool _isCheckingUser = false;
+  String? _usernameError; // Almacena el error de disponibilidad del servidor
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   
   final AuthService _authService = AuthService();
@@ -23,7 +25,23 @@ class _SigninScreenState extends State<SigninScreen> {
   final TextEditingController birthDateController = TextEditingController();
 
   Future<void> _ejecutarRegistro() async {
+    // 1. Validaciones básicas locales
+    if (!_formKey.currentState!.validate()) return;
+
+    if (!_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isCheckingUser = true;
+      _usernameError = null; // Limpiamos error previo
+    });
+    
     try {
+      // 2. Intentamos el registro (el servicio comprobará la disponibilidad)
       await _authService.registrarUsuario(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -39,9 +57,27 @@ class _SigninScreenState extends State<SigninScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al registrar: ${e.toString()}")),
-      );
+      if (mounted) {
+        final errorMsg = e.toString();
+        // 3. Si el error es de nombre en uso, lo mandamos al validador del campo
+        if (errorMsg.contains('en uso')) {
+          setState(() {
+            _usernameError = 'El nombre de usuario ya está en uso';
+          });
+          // Forzamos al formulario a redibujar los errores
+          _formKey.currentState!.validate();
+        } else {
+          // Otros errores (email, red, etc.) se muestran en SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingUser = false);
     }
   }
 
@@ -89,7 +125,7 @@ class _SigninScreenState extends State<SigninScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
-                      onPressed: _loginGoogle, // CONECTADO
+                      onPressed: _loginGoogle,
                       icon: const Icon(Icons.login),
                       label: const Text('con google'),
                     ),
@@ -118,6 +154,14 @@ class _SigninScreenState extends State<SigninScreen> {
                     
                     TextFormField(
                       controller: userController,
+                      onChanged: (value) {
+                        // Limpiamos el error del servidor al empezar a escribir de nuevo
+                        if (_usernameError != null) {
+                          setState(() {
+                            _usernameError = null;
+                          });
+                        }
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor, introduce un usuario';
@@ -127,6 +171,9 @@ class _SigninScreenState extends State<SigninScreen> {
                           return 'El usuario no puede tener más de 15 caracteres';
                         } else if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
                           return 'El usuario solo puede contener letras y números';
+                        }
+                        if (_usernameError != null) {
+                          return _usernameError;
                         }
                         return null;
                       },
@@ -222,18 +269,10 @@ class _SigninScreenState extends State<SigninScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          if (!_acceptTerms) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
-                            );
-                            return;
-                          }
-                          _ejecutarRegistro();
-                        }
-                      },
+                    _isCheckingUser 
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                      onPressed: _ejecutarRegistro,
                       child: const Text('Registrarse'),
                     ),
                     const SizedBox(height: 10),

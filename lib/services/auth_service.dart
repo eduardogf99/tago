@@ -31,6 +31,12 @@ class AuthService {
     return null;
   }
 
+  // Verifica si un nombre de usuario ya existe
+  Future<bool> usuarioExiste(String usuario) async {
+    final query = await _db.collection('usuarios').where('usuario', isEqualTo: usuario).get();
+    return query.docs.isNotEmpty;
+  }
+
   // Registro con Email y Contraseña
   Future<UserCredential> registrarUsuario({
     required String email,
@@ -38,11 +44,18 @@ class AuthService {
     required String usuario,
     required String fechaNacimiento,
   }) async {
+    // 1. Verificar si el nombre de usuario ya existe
+    if (await usuarioExiste(usuario)) {
+      throw 'El nombre de usuario ya está en uso';
+    }
+
+    // 2. Crear el usuario en Firebase Auth
     UserCredential result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
+    // 3. Crear el documento en la colección 'usuarios'
     UserModel nuevoUsuario = UserModel(
       uid: result.user!.uid,
       email: email,

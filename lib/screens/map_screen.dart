@@ -128,12 +128,6 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cerrar"),
-                ),
-              ],
             );
           },
         );
@@ -155,35 +149,57 @@ class _MapScreenState extends State<MapScreen> {
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('marcadores').snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
+              builder: (context, marcadoresSnapshot) {
+                if (marcadoresSnapshot.hasError) {
                   return const Center(child: Text('Error al cargar marcadores'));
                 }
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (marcadoresSnapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // Convertimos los documentos de Firestore en una lista de Marcadores para el mapa
-                List<Marker> markers = snapshot.data!.docs.map((doc) {
-                  Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-                  String docId = doc.id;
-                  
-                  return Marker(
-                    point: LatLng(data['lat'], data['lng']),
-                    width: 40,
-                    height: 40,
-                    rotate: true,
-                    alignment: Alignment.topCenter,
-                    child: GestureDetector(
-                      onTap: () => _showTagoInfo(context, docId, data),
-                      child: const Icon(Icons.location_on_rounded, color: Colors.blue, size: 40),
-                    ),
-                  );
-                }).toList();
+                // Escuchamos también los escaneos del usuario para que el cambio de icono sea instantáneo
+                return StreamBuilder<QuerySnapshot>(
+                  stream: _currentUserId != null 
+                    ? FirebaseFirestore.instance.collection('usuarios').doc(_currentUserId).collection('escaneos').snapshots()
+                    : const Stream.empty(),
+                  builder: (context, escaneosSnapshot) {
+                    // Guardamos los IDs de los Tagos ya escaneados por este usuario
+                    Set<String> scannedIds = {};
+                    if (escaneosSnapshot.hasData) {
+                      scannedIds = escaneosSnapshot.data!.docs.map((doc) => doc.id).toSet();
+                    }
 
-                return OSMMapWidget(
-                  extraMarkers: markers,
+                    List<Marker> markers = marcadoresSnapshot.data!.docs.map((doc) {
+                      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+                      String docId = doc.id;
+                      bool isScanned = scannedIds.contains(docId);
+                      
+                      return Marker(
+                        point: LatLng(data['lat'], data['lng']),
+                        width: 40,
+                        height: 40,
+                        rotate: true,
+                        alignment: Alignment.bottomCenter,
+                        child: GestureDetector(
+                          onTap: () => _showTagoInfo(context, docId, data),
+                          child: Transform.translate(
+                            offset: const Offset(0, -5),
+                            child: Icon(
+                              isScanned ? Icons.location_off_rounded : Icons.location_on_rounded,
+                              color: isScanned ? new Color.fromRGBO(
+                                  61, 156, 91, 1.0) : Colors.blue,
+                              size: 40
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList();
+
+                    return OSMMapWidget(
+                      extraMarkers: markers,
+                    );
+                  }
                 );
               },
             ),
