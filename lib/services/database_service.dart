@@ -14,21 +14,35 @@ class DatabaseService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
 
+  Future<UserModel?> _obtenerUsuarioFirestore(String uid) async {
+    final doc = await _db.collection('usuarios').doc(uid).get();
+    return doc.exists ? UserModel.fromMap(doc.data() as Map<String, dynamic>) : null;
+  }
+
+  Future<List<UserModel>> _obtenerTodosUsuariosFirestore() async {
+    final snapshot = await _db.collection('usuarios').get();
+    return snapshot.docs.map((doc) => UserModel.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<MapMarkerModel>> _obtenerMarcadoresFirestore() async {
+    final snapshot = await _db.collection('marcadores').get();
+    return snapshot.docs.map((doc) => MapMarkerModel.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  //MARCADORES
 
   Future<List<MapMarkerModel>> obtenerMarcadores() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/marcadores'));
-
+      final response = await http.get(Uri.parse('$_baseUrl/marcadores'))
+          .timeout(const Duration(seconds: 2));
+      
       if (response.statusCode == 200) {
         List<dynamic> body = json.decode(response.body);
         return body.map((item) => MapMarkerModel.fromMap(item)).toList();
-      } else {
-        print("Error en la API: ${response.statusCode}");
-        return [];
       }
+      return await _obtenerMarcadoresFirestore();
     } catch (e) {
-      print("Error al conectar con la API: $e");
-      return [];
+      return await _obtenerMarcadoresFirestore();
     }
   }
 
@@ -38,75 +52,66 @@ class DatabaseService {
         Uri.parse('$_baseUrl/marcadores'),
         headers: {"Content-Type": "application/json"},
         body: json.encode({"id": id, ...data}),
-      );
+      ).timeout(const Duration(seconds: 2));
 
       if (response.statusCode != 201) {
-        throw Exception("Error al crear marcador: ${response.statusCode}");
+        await _db.collection('marcadores').doc(id).set(data);
       }
     } catch (e) {
-      print("Error al crear marcador (API): $e");
-      rethrow;
+      await _db.collection('marcadores').doc(id).set(data);
     }
   }
 
+  //USUARIOS
 
-
-  //Obtener la lista completa de usuarios
   Future<List<UserModel>> obtenerTodosLosUsuarios() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/usuarios'));
+      final response = await http.get(Uri.parse('$_baseUrl/usuarios'))
+          .timeout(const Duration(seconds: 2));
 
       if (response.statusCode == 200) {
         List<dynamic> body = json.decode(response.body);
         return body.map((item) => UserModel.fromMap(item)).toList();
-      } else {
-        print("Error al obtener usuarios: ${response.statusCode}");
-        return [];
       }
+      return await _obtenerTodosUsuariosFirestore();
     } catch (e) {
-      print("Error en obtenerTodosLosUsuarios: $e");
-      return [];
+      return await _obtenerTodosUsuariosFirestore();
     }
   }
 
-  //Obtener un usuario específico por su UID
   Future<UserModel?> obtenerUsuario(String uid) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/usuarios/$uid'));
+      final response = await http.get(Uri.parse('$_baseUrl/usuarios/$uid'))
+          .timeout(const Duration(seconds: 2));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return UserModel.fromMap(data);
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw Exception("Error al obtener usuario: ${response.statusCode}");
       }
+      return await _obtenerUsuarioFirestore(uid);
     } catch (e) {
-      print("Error en obtenerUsuario (API): $e");
-      rethrow;
+      return await _obtenerUsuarioFirestore(uid);
     }
   }
 
-  // 3. Crear o actualizar un usuario
   Future<void> actualizarUsuario(String uid, Map<String, dynamic> data) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/usuarios'),
         headers: {"Content-Type": "application/json"},
         body: json.encode({"uid": uid, ...data}),
-      );
+      ).timeout(const Duration(seconds: 2));
 
       if (response.statusCode != 200) {
-        throw Exception("Error al actualizar usuario: ${response.statusCode}");
+        await _db.collection('usuarios').doc(uid).set(data, SetOptions(merge: true));
       }
     } catch (e) {
-      print("Error en actualizarUsuario (API): $e");
-      rethrow;
+
+      await _db.collection('usuarios').doc(uid).set(data, SetOptions(merge: true));
     }
   }
 
-  // --- IMÁGENES (Directo a Firebase Storage por eficiencia) ---
+  // IMÁGENES
 
   Future<String> subirImagenPerfil(String uid, File imageFile) async {
     try {
