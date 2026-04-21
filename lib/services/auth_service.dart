@@ -1,14 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
+import 'database_service.dart';
 
 class AuthService {
   // Instancias privadas
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final DatabaseService _dbService = DatabaseService();
   
-  // Hemos añadido el clientId que has pasado del JSON
+  // Client id qeu se pasa al json
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: '1008380081377-fb1eln8kvg5dc0t0kvr4ggtuqrvheouh.apps.googleusercontent.com',
   );
@@ -19,25 +19,22 @@ class AuthService {
   // Obtener el ID del usuario actual
   String? get currentUid => _auth.currentUser?.uid;
 
-  // Obtener los datos del usuario actual (incluido isAdmin)
+  // Obtener los datos del usuario actual (Migrado para usar DatabaseService/REST)
   Future<UserModel?> getUserData() async {
     User? user = _auth.currentUser;
     if (user != null) {
-      DocumentSnapshot doc = await _db.collection('usuarios').doc(user.uid).get();
-      if (doc.exists) {
-        return UserModel.fromMap(doc.data() as Map<String, dynamic>);
-      }
+      return await _dbService.obtenerUsuario(user.uid);
     }
     return null;
   }
 
-  // Verifica si un nombre de usuario ya existe
+  // Verifica si un nombre de usuario ya existe (Migrado para usar DatabaseService/REST)
   Future<bool> usuarioExiste(String usuario) async {
-    final query = await _db.collection('usuarios').where('usuario', isEqualTo: usuario).get();
-    return query.docs.isNotEmpty;
+    final usuarios = await _dbService.obtenerTodosLosUsuarios();
+    return usuarios.any((u) => u.usuario.toLowerCase() == usuario.toLowerCase());
   }
 
-  // Registro con Email y Contraseña
+  // Registro con Email y Contraseña (Migrado para usar DatabaseService/REST)
   Future<UserCredential> registrarUsuario({
     required String email,
     required String password,
@@ -55,7 +52,7 @@ class AuthService {
       password: password,
     );
 
-    // 3. Crear el documento en la colección 'usuarios'
+    // 3. Crear el documento usando nuestro servicio (que pasa por la API REST)
     UserModel nuevoUsuario = UserModel(
       uid: result.user!.uid,
       email: email,
@@ -64,22 +61,23 @@ class AuthService {
       isAdmin: false,
     );
 
-    await _db.collection('usuarios').doc(nuevoUsuario.uid).set(nuevoUsuario.toMap());
+    await _dbService.actualizarUsuario(nuevoUsuario.uid, nuevoUsuario.toMap());
     return result;
   }
 
-  // Inicio de Sesión con Email/Usuario
+  // Inicio de Sesión con Email/Usuario (Migrado para usar DatabaseService/REST)
   Future<void> iniciarSesion(String input, String password) async {
     String email = input;
     if (!input.contains('@')) {
-      final query = await _db.collection('usuarios').where('usuario', isEqualTo: input).get();
-      if (query.docs.isEmpty) throw 'Usuario no encontrado';
-      email = query.docs.first.get('email');
+      final usuarios = await _dbService.obtenerTodosLosUsuarios();
+      final userMatch = usuarios.where((u) => u.usuario == input);
+      if (userMatch.isEmpty) throw 'Usuario no encontrado';
+      email = userMatch.first.email;
     }
     await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  // Inicio de sesión con google
+  // Inicio de sesión con google (Migrado para usar DatabaseService/REST)
   Future<UserCredential?> iniciarSesionConGoogle() async {
     try {
       // 1. Iniciar el selector de cuentas de Google
@@ -98,7 +96,7 @@ class AuthService {
       // 4. Iniciar sesión en Firebase
       UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // 5. Si es un usuario nuevo, crear su ficha en Firestore
+      // 5. Si es un usuario nuevo, crear su ficha a través de nuestra API REST
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
         UserModel nuevoUsuario = UserModel(
           uid: userCredential.user!.uid,
@@ -107,7 +105,7 @@ class AuthService {
           fechaNacimiento: 'No proporcionada',
           isAdmin: false,
         );
-        await _db.collection('usuarios').doc(nuevoUsuario.uid).set(nuevoUsuario.toMap());
+        await _dbService.actualizarUsuario(nuevoUsuario.uid, nuevoUsuario.toMap());
       }
 
       return userCredential;
