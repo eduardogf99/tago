@@ -14,6 +14,7 @@ class DatabaseService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
 
+  //de momento esto accede de forma directa a firestone. Si tarda más de 3 secs en acceder mediante api rest
   Future<UserModel?> _obtenerUsuarioFirestore(String uid) async {
     final doc = await _db.collection('usuarios').doc(uid).get();
     return doc.exists ? UserModel.fromMap(doc.data() as Map<String, dynamic>) : null;
