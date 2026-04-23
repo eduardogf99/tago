@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import 'dart:typed_data';
@@ -39,7 +38,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     }
   }
 
-  // Mejorado: Una sola función para obtener toda la ubicación
   Future<Map<String, String>> _getLocationData(double lat, double lon) async {
     try {
       final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
@@ -52,151 +50,138 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         final address = data['address'] as Map<String, dynamic>?;
 
         if (address != null) {
-          String municipio = address['city'] ??
-                          address['town'] ?? 
-                          address['village'] ?? 
-                          address['municipality'] ?? 
-                          "Desconocido";
-          
-          String provincia = address['province'] ?? 
-                             address['county'] ?? 
-                             "Desconocido";
-
-          String comunidad = address['state'] ?? "Desconocido";
-                             
-          String pais = address['country'] ?? "Desconocido";
-
           return {
-            'pais': pais,
-            'comunidad': comunidad,
-            'provincia': provincia,
-            'municipio': municipio,
+            'pais': address['country'] ?? "Desconocido",
+            'comunidad': address['state'] ?? "Desconocido",
+            'provincia': address['province'] ?? address['county'] ?? "Desconocido",
+            'municipio': address['city'] ?? address['town'] ?? address['village'] ?? "Desconocido",
           };
         }
       }
     } catch (e) {
       debugPrint("Error obteniendo datos de ubicación: $e");
     }
-    return {
-      'pais': "Desconocido",
-      'comunidad': "Desconocido",
-      'provincia': "Desconocido",
-      'municipio': "Desconocido",
-    };
+    return {'pais': "Desconocido", 'comunidad': "Desconocido", 'provincia': "Desconocido", 'municipio': "Desconocido"};
   }
 
-  Future<void> _handleCreateTaGo() async {
-    final String title = _titleController.text.trim();
-    final String description = _descriptionController.text.trim();
-    final String hint = _hintController.text.trim();
-    String tagoId = const Uuid().v4();
-
-    final ValueNotifier<String> statusTitleNotifier = ValueNotifier<String>("Acerca la pegatina NFC");
-    final ValueNotifier<String> statusSubNotifier = ValueNotifier<String>("Esperando etiqueta...");
-
+  Future<void> _processTagoCreation(String tagoId, String title, String description, String hint) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => const AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            ValueListenableBuilder<String>(
-              valueListenable: statusTitleNotifier,
-              builder: (context, value, _) => Text(
-                value,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ValueListenableBuilder<String>(
-              valueListenable: statusSubNotifier,
-              builder: (context, value, _) => Text(
-                value,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-            ),
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text("Sincronizando con el servidor...", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text("Subiendo información e imagen...", style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
     );
 
     try {
-      bool isAvailable = await NfcManager.instance.isAvailable();
-      if (!isAvailable) throw "NFC no disponible";
-
-      await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-        var ndef = Ndef.from(tag);
-        if (ndef == null || !ndef.isWritable) {
-          NfcManager.instance.stopSession(errorMessage: "No escribible");
-          return;
-        }
-
-        // Creamos el mensaje con el ID y el AAR (Android Application Record)
-        // El AAR asegura que Android abra SIEMPRE nuestra aplicación
-        NdefMessage message = NdefMessage([
-          NdefRecord.createText(tagoId),
-          NdefRecord.createExternal(
-            'android.com',
-            'pkg',
-            Uint8List.fromList('com.example.tfg'.codeUnits),
-          ),
-        ]);
-
-        try {
-          // 1. Escribimos en el NFC
-          statusSubNotifier.value = "Escribiendo ID en etiqueta...";
-          await ndef.write(message);
-          await NfcManager.instance.stopSession();
-          
-          // 2. Proceso de subida a Firebase
-          statusTitleNotifier.value = "Creando TaGo";
-          statusSubNotifier.value = "Subiendo información e imagen...";
-          
-          // --- ASEGURAMOS QUE ESPERA LA SUBIDA ---
-          await _saveToFirestore(tagoId, title, description, hint, _image);
-
-          if (mounted) {
-            Navigator.pop(context); // Cierra diálogo
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('TaGo creado con éxito')),
-            );
-            Navigator.pop(context); // Vuelve al mapa
-          }
-        } catch (e) {
-          NfcManager.instance.stopSession(errorMessage: "Error: $e");
-          if (mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al crear: $e')));
-          }
-        }
-      });
+      await _saveToBackend(tagoId, title, description, hint, _image);
+      if (mounted) {
+        Navigator.pop(context); // Cierra diálogo
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('TaGo creado con éxito')));
+        Navigator.pop(context); // Vuelve al mapa
+      }
     } catch (e) {
       if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error NFC: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
     }
   }
 
-  Future<void> _saveToFirestore(String id, String title, String description, String hint, File? imageFile) async {
-    String? imageUrl;
+  Future<void> _handleCreateTaGo() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    // Aseguramos la subida de imagen y esperamos el resultado
-    if (imageFile != null) {
-      try {
-        imageUrl = await _dbService.subirImagenMarcador(id, imageFile);
-        debugPrint("IMAGEN SUBIDA CON ÉXITO: $imageUrl");
-      } catch (e) {
-        debugPrint("ERROR CRÍTICO AL SUBIR IMAGEN: $e");
+    final String title = _titleController.text.trim();
+    final String description = _descriptionController.text.trim();
+    final String hint = _hintController.text.trim();
+    String tagoId = const Uuid().v4();
+
+    try {
+      bool isAvailable = await NfcManager.instance.isAvailable();
+      if (!isAvailable) {
+        _showSimulationDialog(tagoId, title, description, hint);
+        return;
       }
+
+      _showNfcWaitingDialog();
+      await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
+        var ndef = Ndef.from(tag);
+        if (ndef == null || !ndef.isWritable) {
+          NfcManager.instance.stopSession(errorMessage: "Etiqueta no válida");
+          return;
+        }
+
+        NdefMessage message = NdefMessage([
+          NdefRecord.createText(tagoId),
+          NdefRecord.createExternal('android.com', 'pkg', Uint8List.fromList('com.example.tfg'.codeUnits)),
+        ]);
+
+        try {
+          await ndef.write(message);
+          await NfcManager.instance.stopSession();
+          if (mounted) Navigator.pop(context); 
+          await _processTagoCreation(tagoId, title, description, hint);
+        } catch (e) {
+          NfcManager.instance.stopSession();
+          if (mounted) Navigator.pop(context);
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  void _showSimulationDialog(String tagoId, String title, String description, String hint) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Hardware NFC no detectado"),
+        content: const Text("Parece que estás en un emulador o tu móvil no tiene NFC. ¿Quieres simular la creación del TaGo para probar la base de datos?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _processTagoCreation(tagoId, title, description, hint);
+            }, 
+            child: const Text("Simular creación")
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNfcWaitingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const AlertDialog(
+        title: Text("Acerca la pegatina NFC"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.nfc, size: 50, color: Colors.blue),
+            SizedBox(height: 10),
+            Text("Esperando etiqueta para grabar el ID..."),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveToBackend(String id, String title, String description, String hint, File? imageFile) async {
+    String? imageUrl;
+    if (imageFile != null) {
+      imageUrl = await _dbService.subirImagenMarcador(id, imageFile);
     }
 
-    // Obtenemos todos los datos geográficos en una sola llamada
     final locationData = await _getLocationData(widget.position.latitude, widget.position.longitude);
-
     final String? uid = _authService.currentUid;
     
     await _dbService.crearMarcador(id, {
@@ -212,8 +197,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'provincia': locationData['provincia'],
       'localidad': locationData['municipio'],
       'creadorId': uid,
-      'fechaCreacion': FieldValue.serverTimestamp(),
-      'ultimoEscaneo': FieldValue.serverTimestamp(),
+      'fechaCreacion': DateTime.now().toIso8601String(),
+      'ultimoEscaneo': DateTime.now().toIso8601String(),
     });
   }
 
@@ -237,11 +222,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _titleController,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Por favor, introduce un título';
-                  return null;
-                },
-                decoration: const InputDecoration(hintText: 'Escribe un titulo', border: OutlineInputBorder()),
+                decoration: const InputDecoration(hintText: 'Escribe un título', border: OutlineInputBorder()),
+                validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
               const SizedBox(height: 20),
               const Text('Imagen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -279,34 +261,24 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Por favor, introduce una descripción';
-                  return null;
-                },
                 decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
+                validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               const Text('Pista', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _hintController,
                 maxLines: 2,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Por favor, introduce una pista';
-                  return null;
-                },
                 decoration: const InputDecoration(hintText: 'Escribe una pista para encontrarlo', border: OutlineInputBorder()),
+                validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _handleCreateTaGo();
-                    }
-                  },
+                  onPressed: _handleCreateTaGo,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
                     foregroundColor: Colors.white,
@@ -319,13 +291,5 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _hintController.dispose();
-    super.dispose();
   }
 }
