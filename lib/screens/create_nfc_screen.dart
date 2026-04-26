@@ -84,9 +84,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     try {
       await _saveToBackend(tagoId, title, description, hint, _image);
       if (mounted) {
-        Navigator.pop(context); // Cierra diálogo
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('TaGo creado con éxito')));
-        Navigator.pop(context); // Vuelve al mapa
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) Navigator.pop(context);

@@ -4,6 +4,7 @@ import 'package:tfg/services/auth_service.dart';
 import 'map_screen.dart';
 import 'profile_screen.dart';
 import 'map_admin_screen.dart';
+import 'library_screen.dart';
 import '../widgets/app_navigation_bar.dart';
 
 class MainScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class _MainScreenState extends State<MainScreen> {
   bool _isAdmin = false;
   bool _isLoading = true;
   
-  // Eliminamos 'late' e inicializamos con un valor por defecto para evitar el error
   PageController _pageController = PageController(initialPage: 0);
 
   @override
@@ -27,17 +27,17 @@ class _MainScreenState extends State<MainScreen> {
     _checkAdminStatus();
   }
 
+  // Comprobamos si el usuario tiene permisos de administrador para mostrar pestañas extra
   Future<void> _checkAdminStatus() async {
     final userData = await AuthService().getUserData();
     if (mounted) {
       setState(() {
         _isAdmin = userData?.isAdmin ?? false;
         
-        // Si es admin, lo movemos a su pestaña inicial (índice 1)
+        // Ajustamos el índice inicial según el rol
         _selectedIndex = _isAdmin ? 1 : 0;
         
-        // Re-inicializamos el controlador con la página correcta
-        _pageController.dispose(); // Cerramos el anterior
+        _pageController.dispose(); 
         _pageController = PageController(initialPage: _selectedIndex);
         
         _isLoading = false;
@@ -47,7 +47,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    // Ya no dará error porque siempre estará inicializado
     _pageController.dispose();
     super.dispose();
   }
@@ -60,10 +59,11 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
+    // Definición de las pantallas que componen el menú inferior
     final List<Widget> pages = [
       if (_isAdmin) const MapAdminScreen(),
       const MapScreen(),
-      const Center(child: Text('Pantalla Libro')),
+      const LibraryScreen(),
       if (_isAdmin) const ManageAdminsScreen(),
       const ProfileScreen(),
     ];
@@ -83,6 +83,7 @@ class _MainScreenState extends State<MainScreen> {
         selectedIndex: _selectedIndex,
         isAdmin: _isAdmin,
         onDestinationSelected: (index) {
+          // Animación suave al cambiar de pestaña
           _pageController.animateToPage(
             index,
             duration: const Duration(milliseconds: 300),
