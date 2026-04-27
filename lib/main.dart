@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/tago_screen.dart'; // Importamos la pantalla de Tago
@@ -38,26 +39,35 @@ Future<void> _handleTagoUnlock(String scannedId) async {
 
     final data = tagoDoc.data() as Map<String, dynamic>;
     final String titulo = data['titulo'] ?? 'Sin título';
+    final String codigoPais = data['codigo_pais'] ?? '';
 
     // 2. Verificar si el usuario ya lo ha escaneado antes
-    final scanDoc = await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(user.uid)
-        .collection('escaneos')
-        .doc(scannedId)
-        .get();
+    final userDocRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
+    final scanDoc = await userDocRef.collection('escaneos').doc(scannedId).get();
 
     final context = navigatorKey.currentContext;
     if (context == null) return;
 
     if (!scanDoc.exists) {
       // ES NUEVO: Desbloquear en Firebase
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(user.uid)
-          .collection('escaneos')
-          .doc(scannedId)
-          .set({'fechaEscaneo': FieldValue.serverTimestamp()});
+      await userDocRef.collection('escaneos').doc(scannedId).set({
+        'fechaEscaneo': FieldValue.serverTimestamp()
+      });
+
+      // Lógica de país
+      bool esPrimerTagoDelPais = false;
+      if (codigoPais.isNotEmpty) {
+        final userSnapshot = await userDocRef.get();
+        final userData = userSnapshot.data() as Map<String, dynamic>?;
+        List<dynamic> paisesDescubiertos = userData?['paises_descubiertos'] ?? [];
+        
+        if (!paisesDescubiertos.contains(codigoPais)) {
+          esPrimerTagoDelPais = true;
+          await userDocRef.update({
+            'paises_descubiertos': FieldValue.arrayUnion([codigoPais])
+          });
+        }
+      }
 
       // Mostrar el AlertDialog de "Nuevo TaGo desbloqueado"
       showDialog(
@@ -82,6 +92,22 @@ Future<void> _handleTagoUnlock(String scannedId) async {
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 textAlign: TextAlign.center,
               ),
+              if (esPrimerTagoDelPais) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  "¡Primer TaGo de este país!",
+                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SvgPicture.network(
+                    'https://flagcdn.com/${codigoPais.toLowerCase()}.svg',
+                    width: 100,
+                    placeholderBuilder: (context) => const CircularProgressIndicator(),
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [

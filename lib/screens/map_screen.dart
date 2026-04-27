@@ -180,7 +180,7 @@ class _MapScreenState extends State<MapScreen> {
                         width: 40,
                         height: 40,
                         rotate: true,
-                        alignment: Alignment.bottomCenter,
+                        alignment: Alignment.topCenter,
                         child: GestureDetector(
                           onTap: () => _showTagoInfo(context, docId, data),
                           child: Transform.translate(

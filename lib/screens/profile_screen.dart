@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:tfg/models/user_model.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'package:tfg/services/database_service.dart';
@@ -92,10 +93,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // 1. Subimos la imagen al Storage y obtenemos la URL
       String downloadUrl = await _dbService.subirImagenPerfil(uid, file);
-      
+
       // 2. IMPORTANTE: Guardamos esa URL en el campo 'photoUrl' de Firestore
       await _dbService.actualizarUsuario(uid, {'photoUrl': downloadUrl});
-      
+
       // 3. Refrescamos la UI
       if (mounted) {
         setState(() {});
@@ -119,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perfil'),
+        title: const Text('Pasaporte'),
       ),
       body: uid == null 
         ? const Center(child: Text("No hay sesión iniciada"))
@@ -192,6 +193,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Divider(),
                       _buildInfoRow('TaGo\'s creados', '0', null),
                       const Divider(),
+
+                      // SECCIÓN DE ESTAMPITAS (PAÍSES DESCUBIERTOS)
+                      if (user.paisesDescubiertos.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Stamps',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3, // 3 por fila
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 1.5, // Ajuste para que las banderas se vean bien
+                          ),
+                          itemCount: user.paisesDescubiertos.length,
+                          itemBuilder: (context, index) {
+                            String codigo = user.paisesDescubiertos[index].toLowerCase();
+                            return Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SvgPicture.network(
+                                  'https://flagcdn.com/$codigo.svg',
+                                  fit: BoxFit.cover,
+                                  placeholderBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(),
+                      ],
 
                       const SizedBox(height: 20),
 

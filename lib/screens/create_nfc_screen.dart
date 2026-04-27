@@ -52,6 +52,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         if (address != null) {
           return {
             'pais': address['country'] ?? "Desconocido",
+            'codigo_pais': address['country_code'] ?? "Desconocido",
             'comunidad': address['state'] ?? "Desconocido",
             'provincia': address['province'] ?? address['county'] ?? "Desconocido",
             'municipio': address['city'] ?? address['town'] ?? address['village'] ?? "Desconocido",
@@ -61,7 +62,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     } catch (e) {
       debugPrint("Error obteniendo datos de ubicación: $e");
     }
-    return {'pais': "Desconocido", 'comunidad': "Desconocido", 'provincia': "Desconocido", 'municipio': "Desconocido"};
+    return {'pais': "Desconocido", 'codigo_pais': "Desconocido", 'comunidad': "Desconocido", 'provincia': "Desconocido", 'municipio': "Desconocido"};
   }
 
   Future<void> _processTagoCreation(String tagoId, String title, String description, String hint) async {
@@ -83,14 +84,30 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
 
     try {
       await _saveToBackend(tagoId, title, description, hint, _image);
+      
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('TaGo creado con éxito')));
-        Navigator.pop(context);
+        Navigator.pop(context); // Cerrar diálogo de carga
+        
+        // Pequeño delay para asegurar que la navegación no choca con el SnackBar
+        Future.delayed(Duration.zero, () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('TaGo creado con éxito'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context); // Volver al mapa (MapAdminScreen)
+          }
+        });
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+      if (mounted) {
+        Navigator.pop(context); // Cerrar diálogo de carga
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -110,10 +127,12 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       }
 
       _showNfcWaitingDialog();
+      
       await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
         var ndef = Ndef.from(tag);
         if (ndef == null || !ndef.isWritable) {
-          NfcManager.instance.stopSession(errorMessage: "Etiqueta no válida");
+          await NfcManager.instance.stopSession(errorMessage: "Etiqueta no válida");
+          if (mounted) Navigator.pop(context);
           return;
         }
 
@@ -125,15 +144,22 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         try {
           await ndef.write(message);
           await NfcManager.instance.stopSession();
-          if (mounted) Navigator.pop(context); 
-          await _processTagoCreation(tagoId, title, description, hint);
+          
+          if (mounted) {
+            Navigator.pop(context); // Cerrar diálogo NFC
+            // Iniciamos la subida a base de datos
+            await _processTagoCreation(tagoId, title, description, hint);
+          }
         } catch (e) {
-          NfcManager.instance.stopSession();
-          if (mounted) Navigator.pop(context);
+          await NfcManager.instance.stopSession();
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error NFC: $e")));
+          }
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
     }
   }
 
@@ -193,6 +219,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'lat': widget.position.latitude,
       'lng': widget.position.longitude,
       'pais': locationData['pais'],
+      'codigo_pais': locationData['codigo_pais'],
       'comunidad': locationData['comunidad'],
       'provincia': locationData['provincia'],
       'localidad': locationData['municipio'],
@@ -291,5 +318,13 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _hintController.dispose();
+    super.dispose();
   }
 }
