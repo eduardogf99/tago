@@ -8,7 +8,7 @@ import '../models/marker_model.dart';
 
 class DatabaseService {
   // Configuración del servidor local para el emulador
-  final String _baseUrl = "http://10.0.2.2:5001/tago-ec338/us-central1/api";
+  final String _baseUrl = "http://127.0.0.1:5001/tago-ec338/us-central1/api";
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
