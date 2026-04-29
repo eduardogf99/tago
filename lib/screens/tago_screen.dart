@@ -46,12 +46,6 @@ class _TagoScreenState extends State<TagoScreen> {
             setState(() => _creadorNombre = (userDoc.data() as Map<String, dynamic>)['usuario'] ?? 'Desconocido');
           }
         }
-
-        // Actualizar el campo 'ultimoEscaneo' de forma segura
-        FirebaseFirestore.instance
-            .collection('marcadores')
-            .doc(widget.tagoId)
-            .update({'ultimoEscaneo': FieldValue.serverTimestamp()});
       }
       setState(() => _isLoading = false);
     } catch (e) {

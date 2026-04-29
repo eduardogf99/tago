@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:tfg/widgets/osm_map_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'tago_screen.dart';
+import '../widgets/tago_dialogs.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -15,125 +15,6 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final String? _currentUserId = FirebaseAuth.instance.currentUser?.uid;
-
-  void _showTagoInfo(BuildContext context, String docId, Map<String, dynamic> data) async {
-    // Comprobamos si el usuario ha escaneado este tago previamente
-    // Buscamos en una subcolección del usuario 'escaneos' o similar.
-
-    bool hasScanned = false;
-    if (_currentUserId != null) {
-      final scanDoc = await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(_currentUserId)
-          .collection('escaneos')
-          .doc(docId)
-          .get();
-      hasScanned = scanDoc.exists;
-    }
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        String titulo = data['titulo'] ?? 'Sin título';
-        String? imagenUrl = data['imagenUrl'];
-        String pista = data['pista'] ?? 'No hay pistas disponibles.';
-        bool mostrarPista = false;
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(titulo, textAlign: TextAlign.center),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300, width: 2),
-                    ),
-                    child: ClipOval(
-                      child: hasScanned 
-                        ? (imagenUrl != null && imagenUrl.isNotEmpty
-                            ? Image.network(
-                                imagenUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(child: CircularProgressIndicator());
-                                },
-                                errorBuilder: (context, error, stack) => const Icon(Icons.image_not_supported),
-                              )
-                            : const Icon(Icons.image, size: 50, color: Colors.grey))
-                        : const Center(
-                            child: Text(
-                              "???",
-                              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.grey),
-                            ),
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (hasScanned)
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context); 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TagoScreen(tagoId: docId),
-                          ),
-                        );
-                      },
-                      child: const Text("Ver"),
-                    )
-                  else
-                    Column(
-                      children: [
-                        const Text(
-                          "Escanea este TaGo para ver su contenido",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 15),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Pista", style: TextStyle(fontWeight: FontWeight.bold)),
-                            Switch(
-                              value: mostrarPista,
-                              onChanged: (value) {
-                                setState(() {
-                                  mostrarPista = value;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        if (mostrarPista)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              pista,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.deepPurple),
-                            ),
-                          ),
-                      ],
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,13 +39,11 @@ class _MapScreenState extends State<MapScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                // Escuchamos también los escaneos del usuario para que el cambio de icono sea instantáneo
                 return StreamBuilder<QuerySnapshot>(
                   stream: _currentUserId != null 
                     ? FirebaseFirestore.instance.collection('usuarios').doc(_currentUserId).collection('escaneos').snapshots()
                     : const Stream.empty(),
                   builder: (context, escaneosSnapshot) {
-                    // Guardamos los IDs de los Tagos ya escaneados por este usuario
                     Set<String> scannedIds = {};
                     if (escaneosSnapshot.hasData) {
                       scannedIds = escaneosSnapshot.data!.docs.map((doc) => doc.id).toSet();
@@ -174,6 +53,16 @@ class _MapScreenState extends State<MapScreen> {
                       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
                       String docId = doc.id;
                       bool isScanned = scannedIds.contains(docId);
+                      int reportes = data['reportes'] ?? 0;
+                      
+                      Color iconColor;
+                      if (reportes >= 5) {
+                        iconColor = const Color.fromRGBO(241, 77, 77, 1.0);
+                      } else if (isScanned) {
+                        iconColor = const Color.fromRGBO(61, 156, 91, 1.0);
+                      } else {
+                        iconColor = Colors.blue;
+                      }
                       
                       return Marker(
                         point: LatLng(data['lat'], data['lng']),
@@ -182,13 +71,16 @@ class _MapScreenState extends State<MapScreen> {
                         rotate: true,
                         alignment: Alignment.topCenter,
                         child: GestureDetector(
-                          onTap: () => _showTagoInfo(context, docId, data),
+                          onTap: () => TagoDialogs.mostrarInfoMarcador(
+                            context: context, 
+                            docId: docId,
+                            hasScanned: isScanned,
+                          ),
                           child: Transform.translate(
                             offset: const Offset(0, -5),
                             child: Icon(
                               isScanned ? Icons.location_off_rounded : Icons.location_on_rounded,
-                              color: isScanned ? new Color.fromRGBO(
-                                  61, 156, 91, 1.0) : Colors.blue,
+                              color: iconColor,
                               size: 40
                             ),
                           ),
@@ -196,9 +88,7 @@ class _MapScreenState extends State<MapScreen> {
                       );
                     }).toList();
 
-                    return OSMMapWidget(
-                      extraMarkers: markers,
-                    );
+                    return OSMMapWidget(extraMarkers: markers);
                   }
                 );
               },

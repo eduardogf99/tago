@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_screen.dart';
-import 'screens/tago_screen.dart'; // Importamos la pantalla de Tago
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:nfc_manager/nfc_manager.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_screen.dart';
+import 'controller/nfc_controller.dart';
 
 // Definimos un GlobalKey para navegar sin contexto si es necesario
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -18,193 +15,10 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Iniciamos la escucha de NFC en segundo plano
-  _initNfcListener();
+  // Iniciamos la escucha de NFC en segundo plano desde su controlador especializado
+  NfcController.initBackgroundListener(navigatorKey);
   
   runApp(const MyApp());
-}
-
-// Función para manejar el desbloqueo y navegación
-Future<void> _handleTagoUnlock(String scannedId) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  try {
-    // 1. Verificar si el Tago existe en la base de datos global
-    final tagoDoc = await FirebaseFirestore.instance.collection('marcadores').doc(scannedId).get();
-    if (!tagoDoc.exists) {
-      debugPrint("TaGo con ID $scannedId no encontrado en Firestore");
-      return;
-    }
-
-    final data = tagoDoc.data() as Map<String, dynamic>;
-    final String titulo = data['titulo'] ?? 'Sin título';
-    final String codigoPais = data['codigo_pais'] ?? '';
-
-    // 2. Verificar si el usuario ya lo ha escaneado antes
-    final userDocRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
-    final scanDoc = await userDocRef.collection('escaneos').doc(scannedId).get();
-
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-
-    if (!scanDoc.exists) {
-      // ES NUEVO: Desbloquear en Firebase
-      await userDocRef.collection('escaneos').doc(scannedId).set({
-        'fechaEscaneo': FieldValue.serverTimestamp()
-      });
-
-      // Lógica de país
-      bool esPrimerTagoDelPais = false;
-      if (codigoPais.isNotEmpty) {
-        final userSnapshot = await userDocRef.get();
-        final userData = userSnapshot.data() as Map<String, dynamic>?;
-        List<dynamic> paisesDescubiertos = userData?['paises_descubiertos'] ?? [];
-        
-        if (!paisesDescubiertos.contains(codigoPais)) {
-          esPrimerTagoDelPais = true;
-          await userDocRef.update({
-            'paises_descubiertos': FieldValue.arrayUnion([codigoPais])
-          });
-        }
-      }
-
-      // Mostrar el AlertDialog de "Nuevo TaGo desbloqueado"
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.stars, color: Colors.amber),
-              SizedBox(width: 10),
-              Text("¡Nuevo TaGo!"),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("Has desbloqueado un nuevo sitio:"),
-              const SizedBox(height: 10),
-              Text(
-                titulo,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              if (esPrimerTagoDelPais) ...[
-                const SizedBox(height: 20),
-                const Text(
-                  "¡Primer TaGo de este país!",
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SvgPicture.network(
-                    'https://flagcdn.com/${codigoPais.toLowerCase()}.svg',
-                    width: 100,
-                    placeholderBuilder: (context) => const CircularProgressIndicator(),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(context); // Cerrar dialog
-                navigatorKey.currentState?.push(
-                  MaterialPageRoute(builder: (context) => TagoScreen(tagoId: scannedId)),
-                );
-              },
-              child: const Text("Ver"),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // YA ESTABA DESBLOQUEADO: Mostrar aviso
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue),
-              SizedBox(width: 10),
-              Text("Ya desbloqueado"),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("Este TaGo ya está en tu colección:"),
-              const SizedBox(height: 10),
-              Text(
-                titulo,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cerrar"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(context); // Cerrar dialog
-                navigatorKey.currentState?.push(
-                  MaterialPageRoute(builder: (context) => TagoScreen(tagoId: scannedId)),
-                );
-              },
-              child: const Text("Ver"),
-            ),
-          ],
-        ),
-      );
-    }
-  } catch (e) {
-    debugPrint("Error al procesar NFC: $e");
-  }
-}
-
-void _initNfcListener() async {
-  try {
-    bool isAvailable = await NfcManager.instance.isAvailable();
-    if (!isAvailable) return;
-
-    // Esta sesión se queda escuchando mientras la app esté activa
-    NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      var ndef = Ndef.from(tag);
-      if (ndef != null && ndef.cachedMessage != null) {
-        final records = ndef.cachedMessage!.records;
-        if (records.isNotEmpty) {
-          String payload = String.fromCharCodes(records.first.payload);
-          // Extraer ID (saltando el prefijo de lenguaje de NDEF)
-          String scannedId = payload.substring(records.first.payload[0] + 1);
-          _handleTagoUnlock(scannedId);
-        }
-      }
-    });
-  } catch (e) {
-    debugPrint("Error iniciando lector NFC persistente: $e");
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -214,12 +28,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TaGo',
-      navigatorKey: navigatorKey, // Asignamos la llave global
+      navigatorKey: navigatorKey, // Asignamos la llave global para navegación
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      // Gestión automática de sesión
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {

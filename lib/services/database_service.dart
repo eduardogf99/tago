@@ -84,6 +84,17 @@ class DatabaseService {
     }
   }
 
+  // Reportar un marcador
+  Future<void> reportarMarcador(String id) async {
+    try {
+      await _db.collection('marcadores').doc(id).set({
+        'reportes': FieldValue.increment(1)
+      }, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // --- USUARIOS ---
 
   Future<List<UserModel>> obtenerTodosLosUsuarios() async {

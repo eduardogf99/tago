@@ -312,8 +312,11 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     final String id = tagoData['id'];
     final String titulo = tagoData['titulo'] ?? 'Sin título';
     final String? imagenUrl = tagoData['imagenUrl'];
+    final int reportes = tagoData['reportes'] ?? 0;
+    final bool isCritical = reportes >= 5;
 
     return ListTile(
+      tileColor: isCritical ? Colors.red.withOpacity(0.2) : null,
       leading: Container(
         width: 50, height: 50,
         decoration: BoxDecoration(
@@ -323,14 +326,40 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
         child: imagenUrl == null ? const Icon(Icons.image) : null,
       ),
       title: Text(titulo),
+      subtitle: isCritical ? Text("Reportes: $reportes", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (isCritical)
+            IconButton(
+              icon: const Icon(Icons.build, color: Colors.green),
+              tooltip: "Marcar como arreglado",
+              onPressed: () => _resetReportes(id),
+            ),
           IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editTagoDialog(id, tagoData)),
           IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteTagoDialog(id)),
         ],
       ),
     );
+  }
+
+  Future<void> _resetReportes(String id) async {
+    try {
+      await FirebaseFirestore.instance.collection('marcadores').doc(id).update({'reportes': 0});
+      setState(() {
+        final realIndex = _tagosData.indexWhere((t) => t['id'] == id);
+        if (realIndex != -1) {
+          _tagosData[realIndex]['reportes'] = 0;
+        }
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("TaGo arreglado"))
+        );
+      }
+    } catch (e) {
+      debugPrint("Error resetting reports: $e");
+    }
   }
 
   void _editTagoDialog(String id, Map<String, dynamic> data) {
