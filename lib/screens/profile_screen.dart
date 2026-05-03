@@ -251,31 +251,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 15),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3, // 3 por fila
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 1.5, // Ajuste para que las banderas se vean bien
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15), // Fondo más claro solo para el área de banderas
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          itemCount: user.paisesDescubiertos.length,
-                          itemBuilder: (context, index) {
-                            String codigo = user.paisesDescubiertos[index].toLowerCase();
-                            return Card(
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: SvgPicture.network(
-                                  'https://flagcdn.com/$codigo.svg',
-                                  fit: BoxFit.cover,
-                                  placeholderBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3, // 3 por fila
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.5, // Ajuste para que las banderas se vean bien
+                            ),
+                            itemCount: user.paisesDescubiertos.length,
+                            itemBuilder: (context, index) {
+                              String codigo = user.paisesDescubiertos[index].toLowerCase();
+                              return Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: SvgPicture.network(
+                                    'https://flagcdn.com/$codigo.svg',
+                                    fit: BoxFit.cover,
+                                    placeholderBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 20),
                         const Divider(
@@ -305,7 +312,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             side: const BorderSide(color: Color.fromRGBO(201, 162, 39, 1)),
                           ),
                           child: const Text('Cerrar sesión'),
-
                         ),
                       ),
                       const SizedBox(height: 20),
