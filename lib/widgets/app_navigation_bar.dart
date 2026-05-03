@@ -15,31 +15,37 @@ class AppNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      backgroundColor: Colors.blue.shade200,
+      backgroundColor: new Color.fromRGBO(212, 175, 55, 1),
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
       destinations: [
         if(isAdmin)
           const NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
+            icon: Icon(Icons.add_circle_outline, color: Color.fromRGBO(122, 30, 44, 1),),
             label: '',
           ),
 
         const NavigationDestination(
-          icon: Icon(Icons.map),
+          icon: Icon(
+            Icons.map,
+            color: Color.fromRGBO(122, 30, 44, 1),
+          ),
           label: '',
         ),
         const NavigationDestination(
-          icon: Icon(Icons.menu_book),
+          icon: Icon(
+            Icons.menu_book,
+            color: Color.fromRGBO(122, 30, 44, 1),
+          ),
           label: '',
         ),
         if(isAdmin)
           const NavigationDestination(
-            icon: Icon(Icons.rebase_edit),
+            icon: Icon(Icons.rebase_edit, color: Color.fromRGBO(122, 30, 44, 1),),
             label: '',
           ),
         const NavigationDestination(
-          icon: Icon(Icons.person),
+          icon: Icon(Icons.person, color: Color.fromRGBO(122, 30, 44, 1),),
           label: '',
         ),
       ],

@@ -20,7 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _showEditDialog(String label, String currentValue, String field, String uid) async {
     final TextEditingController controller = TextEditingController(text: currentValue);
-    
+
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -119,10 +119,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? uid = _authService.currentUid;
 
     return Scaffold(
+      backgroundColor: const Color.fromRGBO(122, 30, 44, 1),
       appBar: AppBar(
-        title: const Text('Pasaporte'),
+        title: const Text(
+          'Perfil',
+          style: TextStyle(
+            color: Color.fromRGBO(201, 162, 39, 1),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: uid == null 
+      body: uid == null
         ? const Center(child: Text("No hay sesión iniciada"))
         : FutureBuilder<UserModel?>(
             future: _dbService.obtenerUsuario(uid),
@@ -142,6 +150,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
+                      const SizedBox(height: 30),
+                      const Text(
+                        'PASSPORT',
+                        style: TextStyle(
+                          color: Color.fromRGBO(201, 162, 39, 1),
+                          fontSize: 50,
+                          fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 40),
+                      Icon(
+                        Icons.language_outlined,
+                        size: screenWidth * 0.5,
+                        color: const Color.fromRGBO(201, 162, 39, 1),
+                      ),
+                      const SizedBox(height: 80),
                       // Imagen de perfil con detección de cambios
                       Center(
                         child: GestureDetector(
@@ -154,6 +177,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.grey[300],
                                   shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color.fromRGBO(201, 162, 39, 1),
+                                    width: 5,
+                                  ),
                                   image: user.photoUrl != null && user.photoUrl!.isNotEmpty
                                       ? DecorationImage(
                                           image: NetworkImage(user.photoUrl!),
@@ -162,16 +189,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       : null,
                                 ),
                                 child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                                    ? const Icon(Icons.person, size: 50)
+                                    ? Icon(Icons.person, size: screenWidth * 0.15, color: Colors.grey[700])
                                     : null,
                               ),
                               Positioned(
-                                bottom: 0,
-                                right: 0,
+                                bottom: 5,
+                                right: 5,
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(6),
                                   decoration: const BoxDecoration(
-                                    color: Colors.blue,
+                                    color: Color.fromRGBO(201, 162, 39, 1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
@@ -184,15 +211,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 30),
 
                       _buildInfoRow('Usuario', user.usuario, () => _showEditDialog('Usuario', user.usuario, 'usuario', uid)),
-                      const Divider(),
-                      _buildInfoRow('Correo', user.email, null), 
-                      const Divider(),
+                      const Divider(
+                        color: Color.fromRGBO(197, 179, 129, 1.0),
+                        thickness: 1,
+                      ),
+                      _buildInfoRow('Correo', user.email, null),
+                      const Divider(
+                        color: Color.fromRGBO(197, 179, 129, 1.0),
+                        thickness: 1,
+                      ),
                       _buildInfoRow('Fecha de nacimiento', user.fechaNacimiento, () => _editBirthDate(uid, user.fechaNacimiento)),
-                      const Divider(),
+                      const Divider(
+                        color: Color.fromRGBO(197, 179, 129, 1.0),
+                        thickness: 1,
+                      ),
                       _buildInfoRow('ID amigo', '${user.uid.substring(0, 8)}...', null),
-                      const Divider(),
+                      const Divider(
+                        color: Color.fromRGBO(197, 179, 129, 1.0),
+                        thickness: 1,
+                      ),
                       _buildInfoRow('TaGo\'s creados', '0', null),
-                      const Divider(),
+                      const Divider(
+                        color: Color.fromRGBO(197, 179, 129, 1.0),
+                        thickness: 1,
+                      ),
 
                       // SECCIÓN DE ESTAMPITAS (PAÍSES DESCUBIERTOS)
                       if (user.paisesDescubiertos.isNotEmpty) ...[
@@ -201,7 +243,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             'Stamps',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromRGBO(201, 162, 39, 1),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 15),
@@ -232,7 +278,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
                         const SizedBox(height: 20),
-                        const Divider(),
+                        const Divider(
+                          color: Color.fromRGBO(197, 179, 129, 1.0),
+                          thickness: 1,
+                        ),
                       ],
 
                       const SizedBox(height: 20),
@@ -251,12 +300,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.shade50,
-                            foregroundColor: Colors.red,
+                            backgroundColor: const Color.fromRGBO(201, 162, 39, 0.1),
+                            foregroundColor: const Color.fromRGBO(201, 162, 39, 1),
+                            side: const BorderSide(color: Color.fromRGBO(201, 162, 39, 1)),
                           ),
                           child: const Text('Cerrar sesión'),
+
                         ),
                       ),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -275,13 +327,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: Text(
               '$label: $value',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: Color.fromRGBO(209, 180, 77, 1.0),
+                fontSize: 17, fontWeight: FontWeight.w500,
+              )
             ),
           ),
           if (onEdit != null)
             IconButton(
               onPressed: onEdit,
               icon: const Icon(Icons.edit, size: 20),
+              color: const Color.fromRGBO(201, 162, 39, 1),
             ),
         ],
       ),
