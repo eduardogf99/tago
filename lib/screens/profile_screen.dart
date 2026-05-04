@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tfg/models/user_model.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'package:tfg/services/database_service.dart';
@@ -18,68 +19,141 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _dbService = DatabaseService();
 
-  Future<void> _showEditDialog(String label, String currentValue, String field, String uid) async {
-    final TextEditingController controller = TextEditingController(text: currentValue);
+  final Color azulOscuro = const Color(0xFF0D1B2A);
+  final Color azulContenedor = const Color(0xFF1B263B);
+  final Color azulStamps = const Color(0xFF415A77);
+  final Color doradoClaro = const Color(0xFFE0C17A);
+
+  String? _usernameError;
+
+  Future<int> _getCount(String uid, String collectionPath) async {
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .collection(collectionPath)
+          .get();
+      return query.docs.length;
+    } catch (e) {
+      debugPrint("Error contando $collectionPath: $e");
+      return 0;
+    }
+  }
+
+  // --- NUEVA FUNCIÓN DE EDICIÓN COMPLETA ---
+  Future<void> _showEditProfileDialog(UserModel user) async {
+    final TextEditingController userController = TextEditingController(text: user.usuario);
+    final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
+    String selectedDate = user.fechaNacimiento;
+    _usernameError = null; // Reiniciar error al abrir
 
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Editar $label'),
-        content: TextFormField(
-          controller: controller,
-          decoration: InputDecoration(hintText: "Introduce nuevo $label"),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: azulContenedor,
+          title: Text('Editar Perfil', style: TextStyle(color: doradoClaro)),
+          content: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: userController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Nombre de usuario',
+                    labelStyle: TextStyle(color: doradoClaro),
+                    errorText: _usernameError, // Aquí se muestra el mensaje debajo
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: doradoClaro)),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: doradoClaro)),
+                    errorStyle: const TextStyle(color: Colors.redAccent),
+                  ),
+                  // Validador visual simple
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'El nombre no puede estar vacío';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Nacimiento: $selectedDate", style: const TextStyle(color: Colors.white)),
+                    IconButton(
+                      icon: Icon(Icons.calendar_month, color: doradoClaro),
+                      onPressed: () async {
+                        DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                          // Personalización de colores del picker para que pegue con tu diseño
+                          builder: (context, child) => Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: ColorScheme.dark(
+                                primary: doradoClaro,
+                                onPrimary: azulOscuro,
+                                surface: azulContenedor,
+                              ),
+                            ),
+                            child: child!,
+                          ),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedDate = "${picked.toLocal()}".split(' ')[0];
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          TextButton(
-            onPressed: () async {
-              String newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                // Si estamos editando el usuario y ha cambiado, comprobamos si ya existe
-                if (field == 'usuario' && newValue != currentValue) {
-                  bool exists = await _authService.usuarioExiste(newValue);
-                  if (exists) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('El nombre de usuario ya está en uso'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: doradoClaro),
+              onPressed: () async {
+                // 1. Validar campos básicos
+                if (!dialogFormKey.currentState!.validate()) return;
+
+                String nuevoUsuario = userController.text.trim();
+
+                // 2. Comprobación asíncrona de usuario
+                if (nuevoUsuario != user.usuario) {
+                  // Mostramos un estado de carga opcional o simplemente bloqueamos
+                  bool existe = await _authService.usuarioExiste(nuevoUsuario);
+                  if (existe) {
+                    setDialogState(() {
+                      _usernameError = 'El nombre de usuario ya existe';
+                    });
                     return;
                   }
                 }
 
-                await _dbService.actualizarUsuario(uid, {field: newValue});
-                if (mounted) {
+                // 3. Si todo está bien, actualizamos
+                await _dbService.actualizarUsuario(user.uid, {
+                  'usuario': nuevoUsuario,
+                  'fechaNacimiento': selectedDate,
+                });
+
+                if (context.mounted) {
                   Navigator.pop(context);
-                  setState(() {}); // Refrescar para ver los cambios
+                  setState(() {});
                 }
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+              },
+              child: Text('Guardar', style: TextStyle(color: azulOscuro)),
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  Future<void> _editBirthDate(String uid, String currentPath) async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (pickedDate != null) {
-      String formattedDate = "${pickedDate.toLocal()}".split(' ')[0];
-      await _dbService.actualizarUsuario(uid, {'fechaNacimiento': formattedDate});
-      setState(() {});
-    }
   }
 
   Future<void> _pickImage(String uid) async {
@@ -91,260 +165,283 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _uploadImage(String uid, File file) async {
     try {
-      // 1. Subimos la imagen al Storage y obtenemos la URL
       String downloadUrl = await _dbService.subirImagenPerfil(uid, file);
-
-      // 2. IMPORTANTE: Guardamos esa URL en el campo 'photoUrl' de Firestore
       await _dbService.actualizarUsuario(uid, {'photoUrl': downloadUrl});
-
-      // 3. Refrescamos la UI
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto de perfil actualizada con éxito')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto de perfil actualizada')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar la foto: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
     String? uid = _authService.currentUid;
 
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(122, 30, 44, 1),
-      appBar: AppBar(
-        title: const Text(
-          'Perfil',
-          style: TextStyle(
-            color: Color.fromRGBO(201, 162, 39, 1),
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      backgroundColor: azulOscuro,
       body: uid == null
-        ? const Center(child: Text("No hay sesión iniciada"))
-        : FutureBuilder<UserModel?>(
-            future: _dbService.obtenerUsuario(uid),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          ? const Center(child: Text("No hay sesión iniciada"))
+          : FutureBuilder<UserModel?>(
+        future: _dbService.obtenerUsuario(uid),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text("Error al cargar perfil", style: TextStyle(color: Colors.white)));
+          }
 
-              if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-                return const Center(child: Text("Error al cargar los datos del perfil"));
-              }
+          final user = snapshot.data!;
 
-              final user = snapshot.data!;
-
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: SingleChildScrollView(
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Column(
                     children: [
-                      const SizedBox(height: 30),
-                      const Text(
+                      const SizedBox(height: 80),
+                      Text(
                         'PASSPORT',
                         style: TextStyle(
-                          color: Color.fromRGBO(201, 162, 39, 1),
-                          fontSize: 50,
-                          fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 40),
-                      Icon(
-                        Icons.language_outlined,
-                        size: screenWidth * 0.5,
-                        color: const Color.fromRGBO(201, 162, 39, 1),
+                          color: doradoClaro,
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
                       ),
                       const SizedBox(height: 80),
-                      // Imagen de perfil con detección de cambios
-                      Center(
-                        child: GestureDetector(
-                          onTap: () => _pickImage(uid),
-                          child: Stack(
+                      Icon(Icons.language_outlined, color: doradoClaro, size: 110),
+                      const SizedBox(height: 50),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // --- CONTENEDOR PRINCIPAL CON BOTÓN DE EDICIÓN ---
+                Stack(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: azulContenedor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 15),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Container(
-                                width: screenWidth * 0.3,
-                                height: screenWidth * 0.3,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color.fromRGBO(201, 162, 39, 1),
-                                    width: 5,
+                              SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.35,
+                                child: GestureDetector(
+                                  onTap: () => _pickImage(uid),
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 55,
+                                        backgroundColor: doradoClaro,
+                                        child: CircleAvatar(
+                                          radius: 52,
+                                          backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
+                                              ? NetworkImage(user.photoUrl!)
+                                              : null,
+                                          child: (user.photoUrl == null || user.photoUrl!.isEmpty)
+                                              ? Icon(Icons.person, size: 50, color: azulOscuro)
+                                              : null,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 10,
+                                        child: CircleAvatar(
+                                          radius: 15,
+                                          backgroundColor: doradoClaro,
+                                          child: Icon(Icons.camera_alt, size: 15, color: azulOscuro),
+                                        ),
+                                      )
+                                    ],
                                   ),
-                                  image: user.photoUrl != null && user.photoUrl!.isNotEmpty
-                                      ? DecorationImage(
-                                          image: NetworkImage(user.photoUrl!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
                                 ),
-                                child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                                    ? Icon(Icons.person, size: screenWidth * 0.15, color: Colors.grey[700])
-                                    : null,
                               ),
-                              Positioned(
-                                bottom: 5,
-                                right: 5,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: const BoxDecoration(
-                                    color: Color.fromRGBO(201, 162, 39, 1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user.usuario,
+                                      style: TextStyle(color: doradoClaro, fontSize: 20, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      user.fechaNacimiento,
+                                      style: TextStyle(color: doradoClaro.withOpacity(0.8), fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "ID: ${user.uid.substring(0, 12)}...",
+                                      style: TextStyle(color: doradoClaro.withOpacity(0.8), fontSize: 14),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
+                          const SizedBox(height: 25),
 
-                      _buildInfoRow('Usuario', user.usuario, () => _showEditDialog('Usuario', user.usuario, 'usuario', uid)),
-                      const Divider(
-                        color: Color.fromRGBO(197, 179, 129, 1.0),
-                        thickness: 1,
-                      ),
-                      _buildInfoRow('Correo', user.email, null),
-                      const Divider(
-                        color: Color.fromRGBO(197, 179, 129, 1.0),
-                        thickness: 1,
-                      ),
-                      _buildInfoRow('Fecha de nacimiento', user.fechaNacimiento, () => _editBirthDate(uid, user.fechaNacimiento)),
-                      const Divider(
-                        color: Color.fromRGBO(197, 179, 129, 1.0),
-                        thickness: 1,
-                      ),
-                      _buildInfoRow('ID amigo', '${user.uid.substring(0, 8)}...', null),
-                      const Divider(
-                        color: Color.fromRGBO(197, 179, 129, 1.0),
-                        thickness: 1,
-                      ),
-                      _buildInfoRow('TaGo\'s creados', '0', null),
-                      const Divider(
-                        color: Color.fromRGBO(197, 179, 129, 1.0),
-                        thickness: 1,
-                      ),
+                          Row(
+                            children: [
+                              Icon(Icons.email_outlined, color: doradoClaro, size: 18),
+                              const SizedBox(width: 10),
+                              Text(user.email, style: TextStyle(color: doradoClaro, fontSize: 15)),
+                            ],
+                          ),
+                          const SizedBox(height: 25),
 
-                      // SECCIÓN DE ESTAMPITAS (PAÍSES DESCUBIERTOS)
-                      if (user.paisesDescubiertos.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        const Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Stamps',
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color.fromRGBO(201, 162, 39, 1),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15), // Fondo más claro solo para el área de banderas
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3, // 3 por fila
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                              childAspectRatio: 1.5, // Ajuste para que las banderas se vean bien
-                            ),
-                            itemCount: user.paisesDescubiertos.length,
-                            itemBuilder: (context, index) {
-                              String codigo = user.paisesDescubiertos[index].toLowerCase();
-                              return Card(
-                                elevation: 2,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: SvgPicture.network(
-                                    'https://flagcdn.com/$codigo.svg',
-                                    fit: BoxFit.cover,
-                                    placeholderBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                  ),
-                                ),
+                          FutureBuilder<List<int>>(
+                            future: Future.wait([
+                              _getCount(uid, 'escaneos'),
+                              _getCount(uid, 'creados'),
+                            ]),
+                            builder: (context, statsSnapshot) {
+                              String escaneados = statsSnapshot.hasData ? statsSnapshot.data![0].toString() : "...";
+                              String creados = statsSnapshot.hasData ? statsSnapshot.data![1].toString() : "...";
+
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildStatColumn("TaGo's\nescaneados", escaneados),
+                                  _buildStatColumn("TaGo's\ncreados", creados),
+                                  _buildStatColumn("Países\nvisitados", user.paisesDescubiertos.length.toString()),
+                                ],
                               );
                             },
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Divider(
-                          color: Color.fromRGBO(197, 179, 129, 1.0),
-                          thickness: 1,
-                        ),
-                      ],
 
-                      const SizedBox(height: 20),
+                          const SizedBox(height: 25),
 
-                      SizedBox(
-                        width: screenWidth * 0.4,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await _authService.cerrarSesion();
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                                (route) => false,
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromRGBO(201, 162, 39, 0.1),
-                            foregroundColor: const Color.fromRGBO(201, 162, 39, 1),
-                            side: const BorderSide(color: Color.fromRGBO(201, 162, 39, 1)),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'STAMPS',
+                              style: TextStyle(color: doradoClaro, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1.2),
+                            ),
                           ),
-                          child: const Text('Cerrar sesión'),
-                        ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: azulStamps,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: user.paisesDescubiertos.isEmpty
+                                ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(child: Text("No hay sellos aún", style: TextStyle(color: Colors.white60))),
+                            )
+                                : GridView.builder(
+                              padding: const EdgeInsets.only(top: 10, bottom: 10, left: 8, right: 8),
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 20,
+                                mainAxisSpacing: 15,
+                                childAspectRatio: 1.0,
+                              ),
+                              itemCount: user.paisesDescubiertos.length,
+                              itemBuilder: (context, index) {
+                                String codigo = user.paisesDescubiertos[index].toLowerCase();
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: doradoClaro, width: 4),
+                                  ),
+                                  child: ClipOval(
+                                    child: SvgPicture.network(
+                                      'https://flagcdn.com/$codigo.svg',
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await _authService.cerrarSesion();
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                        (route) => false,
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.logout),
+                              label: const Text('CERRAR SESIÓN'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent.withOpacity(0.8),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    ),
+                    // BOTÓN DE EDICIÓN EN LA ESQUINA
+                    Positioned(
+                      top: 10,
+                      right: 25,
+                      child: IconButton(
+                        icon: Icon(Icons.edit, color: doradoClaro, size: 24),
+                        onPressed: () => _showEditProfileDialog(user),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, VoidCallback? onEdit) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildStatColumn(String label, String value) {
+    return Expanded(
+      child: Column(
         children: [
-          Expanded(
-            child: Text(
-              '$label: $value',
-              style: const TextStyle(
-                color: Color.fromRGBO(209, 180, 77, 1.0),
-                fontSize: 17, fontWeight: FontWeight.w500,
-              )
-            ),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: doradoClaro.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w500),
           ),
-          if (onEdit != null)
-            IconButton(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit, size: 20),
-              color: const Color.fromRGBO(201, 162, 39, 1),
-            ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(color: doradoClaro, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

@@ -209,7 +209,10 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
 
     final locationData = await _getLocationData(widget.position.latitude, widget.position.longitude);
     final String? uid = _authService.currentUid;
-    
+
+    if (uid == null) throw Exception("No hay un usuario autenticado");
+
+    // Creamos el marcador en la colección global 'marcadores'
     await _dbService.crearMarcador(id, {
       'id': id,
       'titulo': title,
@@ -227,6 +230,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'fechaCreacion': DateTime.now().toIso8601String(),
       'ultimoEscaneo': DateTime.now().toIso8601String(),
     });
+
+    // Registramos el TaGo en la subcolección 'creados' del usuario
+    await _dbService.registrarTagoCreado(uid, id);
   }
 
   @override

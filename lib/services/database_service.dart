@@ -187,6 +187,14 @@ class DatabaseService {
     }
   }
 
+  // En tu DatabaseService
+  Future<void> registrarTagoCreado(String uid, String tagoId) async {
+    await _db.collection('usuarios').doc(uid).collection('creados').doc(tagoId).set({
+      'tagoId': tagoId,
+      'fechaCreacion': FieldValue.serverTimestamp(),
+    });
+  }
+
   // --- SUBIDA DE IMÁGENES (Directo a Storage) ---
 
   Future<String> subirImagenPerfil(String uid, File imageFile) async {
