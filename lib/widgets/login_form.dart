@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:tfg/screens/main_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 
+import '../theme/app_colors.dart';
+
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
 
@@ -15,7 +17,6 @@ class _LoginFormState extends State<LoginForm> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // Instancia del servicio
   final AuthService _authService = AuthService();
 
   Future<void> _login() async {
@@ -24,36 +25,37 @@ class _LoginFormState extends State<LoginForm> {
 
     if (input.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Por favor, rellena todos los campos")),
+        const SnackBar(
+          content: Text("Por favor, rellena todos los campos"),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // Usamos el servicio para iniciar sesión
       await _authService.iniciarSesion(input, password);
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainScreen()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -65,13 +67,16 @@ class _LoginFormState extends State<LoginForm> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainScreen()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error Google: ${e.toString()}")),
+          SnackBar(
+            content: Text("Error Google: ${e.toString()}"),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -84,67 +89,97 @@ class _LoginFormState extends State<LoginForm> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'Iniciar sesión',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-        TextField(
+        // Campo de Usuario/Correo
+        _buildTextField(
           controller: _userController,
-          decoration: const InputDecoration(
-            labelText: 'Usuario o Correo',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.person),
-          ),
+          label: 'Usuario o Correo',
+          icon: Icons.person_outline,
         ),
-        const SizedBox(height: 15),
-        TextField(
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          obscuringCharacter: '*',
-          decoration: InputDecoration(
-            labelText: 'Contraseña',
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.lock),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        
-        // Botón de Google
-        _isLoading 
-          ? const SizedBox.shrink() 
-          : OutlinedButton.icon(
-              onPressed: _loginGoogle,
-              icon: const Icon(Icons.login, color: Colors.red), 
-              label: const Text('Acceder con Google'),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                side: const BorderSide(color: Colors.grey),
-              ),
-            ),
-        
         const SizedBox(height: 15),
 
+        // Campo de Contraseña
+        _buildTextField(
+          controller: _passwordController,
+          label: 'Contraseña',
+          icon: Icons.lock_outline,
+          isPassword: true,
+        ),
+        const SizedBox(height: 25),
+
+        // Botón de Google (Secundario)
+        if (!_isLoading) ...[
+          OutlinedButton.icon(
+            onPressed: _loginGoogle,
+            icon: const Icon(Icons.login),
+            label: const Text('ACCEDER CON GOOGLE'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              foregroundColor: AppColors.doradoClaro,
+              side: const BorderSide(color: AppColors.doradoClaro),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 15),
+        ],
+
+        // Botón de Aceptar (Principal)
         _isLoading
-            ? const CircularProgressIndicator()
+            ? const CircularProgressIndicator(color: AppColors.doradoClaro)
             : ElevatedButton(
-                onPressed: _login,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text('Aceptar'),
-              ),
+          onPressed: _login,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.doradoClaro,
+            foregroundColor: AppColors.azulOscuro,
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          child: const Text(
+            'ENTRAR',
+            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.5),
+          ),
+        ),
       ],
+    );
+  }
+
+  // Helper para construir los campos de texto con el estilo Passport
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? _obscurePassword : false,
+      obscuringCharacter: '*',
+      style: const TextStyle(color: Colors.white),
+      cursorColor: AppColors.doradoClaro,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.azulClaro),
+        prefixIcon: Icon(icon, color: AppColors.azulStamps),
+        suffixIcon: isPassword
+            ? IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: AppColors.azulStamps,
+          ),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        )
+            : null,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.azulStamps),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2),
+        ),
+        filled: true,
+        fillColor: AppColors.azulOscuro.withOpacity(0.3),
+      ),
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:tfg/models/user_model.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'package:tfg/services/database_service.dart';
 import 'package:tfg/widgets/image_helper.dart';
+import '../theme/app_colors.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -18,11 +19,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _dbService = DatabaseService();
-
-  final Color azulOscuro = const Color(0xFF0D1B2A);
-  final Color azulContenedor = const Color(0xFF1B263B);
-  final Color azulStamps = const Color(0xFF415A77);
-  final Color doradoClaro = const Color(0xFFE0C17A);
 
   String? _usernameError;
 
@@ -51,8 +47,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: azulContenedor,
-          title: Text('Editar Perfil', style: TextStyle(color: doradoClaro)),
+          backgroundColor: AppColors.azulContenedor,
+          title: Text('Editar Perfil', style: TextStyle(color: AppColors.doradoClaro)),
           content: Form(
             key: dialogFormKey,
             child: Column(
@@ -60,14 +56,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 TextFormField(
                   controller: userController,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.blancoTexto),
                   decoration: InputDecoration(
                     labelText: 'Nombre de usuario',
-                    labelStyle: TextStyle(color: doradoClaro),
+                    labelStyle: TextStyle(color: AppColors.doradoClaro),
                     errorText: _usernameError, // Aquí se muestra el mensaje debajo
-                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: doradoClaro)),
-                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: doradoClaro)),
-                    errorStyle: const TextStyle(color: Colors.redAccent),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.doradoClaro)),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.doradoClaro)),
+                    errorStyle: const TextStyle(color: AppColors.error),
                   ),
                   // Validador visual simple
                   validator: (value) {
@@ -79,9 +75,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Nacimiento: $selectedDate", style: const TextStyle(color: Colors.white)),
+                    Text("Nacimiento: $selectedDate", style: const TextStyle(color: AppColors.blancoTexto)),
                     IconButton(
-                      icon: Icon(Icons.calendar_month, color: doradoClaro),
+                      icon: Icon(Icons.calendar_month, color: AppColors.doradoClaro),
                       onPressed: () async {
                         DateTime? picked = await showDatePicker(
                           context: context,
@@ -92,9 +88,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           builder: (context, child) => Theme(
                             data: Theme.of(context).copyWith(
                               colorScheme: ColorScheme.dark(
-                                primary: doradoClaro,
-                                onPrimary: azulOscuro,
-                                surface: azulContenedor,
+                                primary: AppColors.doradoClaro,
+                                onPrimary: AppColors.azulOscuro,
+                                surface: AppColors.azulContenedor,
                               ),
                             ),
                             child: child!,
@@ -115,10 +111,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+              child: const Text('Cancelar', style: TextStyle(color: AppColors.blancoTexto)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: doradoClaro),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.doradoClaro),
               onPressed: () async {
                 // 1. Validar campos básicos
                 if (!dialogFormKey.currentState!.validate()) return;
@@ -148,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   setState(() {});
                 }
               },
-              child: Text('Guardar', style: TextStyle(color: azulOscuro)),
+              child: Text('Guardar', style: TextStyle(color: AppColors.azulOscuro)),
             ),
           ],
         ),
@@ -183,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? uid = _authService.currentUid;
 
     return Scaffold(
-      backgroundColor: azulOscuro,
+      backgroundColor: AppColors.azulOscuro,
       body: uid == null
           ? const Center(child: Text("No hay sesión iniciada"))
           : FutureBuilder<UserModel?>(
@@ -193,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text("Error al cargar perfil", style: TextStyle(color: Colors.white)));
+            return const Center(child: Text("Error al cargar perfil", style: TextStyle(color: AppColors.blancoTexto)));
           }
 
           final user = snapshot.data!;
@@ -210,14 +206,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         'PASSPORT',
                         style: TextStyle(
-                          color: doradoClaro,
+                          color: AppColors.doradoClaro,
                           fontSize: 40,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
                         ),
                       ),
                       const SizedBox(height: 80),
-                      Icon(Icons.language_outlined, color: doradoClaro, size: 110),
+                      Icon(Icons.language_outlined, color: AppColors.doradoClaro, size: 110),
                       const SizedBox(height: 50),
                     ],
                   ),
@@ -231,7 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: azulContenedor,
+                        color: AppColors.azulContenedor,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
@@ -249,14 +245,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 55,
-                                        backgroundColor: doradoClaro,
+                                        backgroundColor: AppColors.doradoClaro,
                                         child: CircleAvatar(
                                           radius: 52,
                                           backgroundImage: (user.photoUrl != null && user.photoUrl!.isNotEmpty)
                                               ? NetworkImage(user.photoUrl!)
                                               : null,
                                           child: (user.photoUrl == null || user.photoUrl!.isEmpty)
-                                              ? Icon(Icons.person, size: 50, color: azulOscuro)
+                                              ? Icon(Icons.person, size: 50, color: AppColors.azulOscuro)
                                               : null,
                                         ),
                                       ),
@@ -265,8 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         right: 10,
                                         child: CircleAvatar(
                                           radius: 15,
-                                          backgroundColor: doradoClaro,
-                                          child: Icon(Icons.camera_alt, size: 15, color: azulOscuro),
+                                          backgroundColor: AppColors.doradoClaro,
+                                          child: Icon(Icons.camera_alt, size: 15, color: AppColors.azulOscuro),
                                         ),
                                       )
                                     ],
@@ -280,17 +276,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   children: [
                                     Text(
                                       user.usuario,
-                                      style: TextStyle(color: doradoClaro, fontSize: 20, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: AppColors.doradoClaro, fontSize: 20, fontWeight: FontWeight.bold),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       user.fechaNacimiento,
-                                      style: TextStyle(color: doradoClaro.withOpacity(0.8), fontSize: 14),
+                                      style: TextStyle(color: AppColors.doradoClaro.withOpacity(0.8), fontSize: 14),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       "ID: ${user.uid.substring(0, 12)}...",
-                                      style: TextStyle(color: doradoClaro.withOpacity(0.8), fontSize: 14),
+                                      style: TextStyle(color: AppColors.doradoClaro.withOpacity(0.8), fontSize: 14),
                                     ),
                                   ],
                                 ),
@@ -301,9 +297,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           Row(
                             children: [
-                              Icon(Icons.email_outlined, color: doradoClaro, size: 18),
+                              Icon(Icons.email_outlined, color: AppColors.doradoClaro, size: 18),
                               const SizedBox(width: 10),
-                              Text(user.email, style: TextStyle(color: doradoClaro, fontSize: 15)),
+                              Text(user.email, style: TextStyle(color: AppColors.doradoClaro, fontSize: 15)),
                             ],
                           ),
                           const SizedBox(height: 25),
@@ -335,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               'STAMPS',
-                              style: TextStyle(color: doradoClaro, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1.2),
+                              style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1.2),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -343,7 +339,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: azulStamps,
+                              color: AppColors.azulStamps,
                               borderRadius: BorderRadius.circular(15),
                             ),
                             child: user.paisesDescubiertos.isEmpty
@@ -367,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 return Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: doradoClaro, width: 4),
+                                    border: Border.all(color: AppColors.doradoClaro, width: 4),
                                   ),
                                   child: ClipOval(
                                     child: SvgPicture.network(
@@ -398,8 +394,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               icon: const Icon(Icons.logout),
                               label: const Text('CERRAR SESIÓN'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent.withOpacity(0.8),
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.rojoSuave,
+                                foregroundColor: AppColors.blancoTexto,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
@@ -413,7 +409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       top: 10,
                       right: 25,
                       child: IconButton(
-                        icon: Icon(Icons.edit, color: doradoClaro, size: 24),
+                        icon: Icon(Icons.edit, color: AppColors.doradoClaro, size: 24),
                         onPressed: () => _showEditProfileDialog(user),
                       ),
                     ),
@@ -435,12 +431,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(color: doradoClaro.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w500),
+            style: TextStyle(color: AppColors.doradoClaro.withOpacity(0.9), fontSize: 11, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(color: doradoClaro, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.doradoClaro, fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart'; // Añadido para manejar ubicación aquí
+import '../theme/app_colors.dart';
 import '../widgets/osm_map_widget.dart';
 import 'create_nfc_screen.dart';
 
@@ -40,7 +41,7 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(0, 0, 0, 0),
+      backgroundColor: AppColors.azulOscuro,
       body: Column(
         children: [
           Expanded(
@@ -61,10 +62,11 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
                 ElevatedButton.icon(
                   onPressed: _useCurrentLocation,
                   icon: const Icon(Icons.my_location),
-                  label: const Text('Usar mi posición actual'),
+                  label: const Text('Usar mi posición actual',),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: Colors.blue.shade50,
+                    backgroundColor: AppColors.doradoClaro,
+                    foregroundColor: AppColors.azulContenedor,
                   ),
                 ),
                 
@@ -77,8 +79,8 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
                     label: const Text('Crear en el punto marcado'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: Colors.purple.shade50,
-                      foregroundColor: Colors.purple,
+                      backgroundColor: AppColors.doradoClaro,
+                      foregroundColor: AppColors.azulContenedor,
                     ),
                   ),
                 ],

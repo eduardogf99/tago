@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/tago_screen.dart';
+import '../theme/app_colors.dart';
 
 /// Este widget representa la tarjeta visual de un TaGo en el libro de colección.
 /// Se encarga de mostrar la imagen, el título y gestionar la navegación al detalle.
@@ -22,7 +23,7 @@ class TagoCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.doradoClaro,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -45,13 +46,13 @@ class TagoCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => 
                           Container(
-                            color: Colors.grey[200], 
-                            child: const Icon(Icons.broken_image, color: Colors.grey)
+                            color: AppColors.azulContenedor,
+                            child: const Icon(Icons.broken_image, color: AppColors.azulStamps)
                           ),
                       )
                     : Container(
-                        color: Colors.deepPurple.shade50,
-                        child: const Icon(Icons.image, color: Colors.deepPurple, size: 40),
+                        color: AppColors.azulStamps,
+                        child: const Icon(Icons.image, color: AppColors.azulStamps, size: 40),
                       ),
               ),
             ),
@@ -64,7 +65,7 @@ class TagoCard extends StatelessWidget {
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
-                  color: Colors.black87,
+                  color: AppColors.azulOscuro,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:tfg/widgets/osm_map_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../theme/app_colors.dart';
 import '../widgets/tago_dialogs.dart';
 
 class MapScreen extends StatefulWidget {
@@ -19,11 +20,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: false,
-      appBar: AppBar(
-        title: const Text("TaGo"),
-        backgroundColor: const Color.fromRGBO(0, 0, 0, 0),
-      ),
+      extendBodyBehindAppBar: true,
       backgroundColor: const Color.fromRGBO(0, 0, 0, 0),
       body: Column(
         children: [
@@ -57,11 +54,11 @@ class _MapScreenState extends State<MapScreen> {
                       
                       Color iconColor;
                       if (reportes >= 5) {
-                        iconColor = const Color.fromRGBO(241, 77, 77, 1.0);
+                        iconColor = AppColors.rojoSuave;
                       } else if (isScanned) {
-                        iconColor = const Color.fromRGBO(61, 156, 91, 1.0);
+                        iconColor = AppColors.azulStamps;
                       } else {
-                        iconColor = Colors.blue;
+                        iconColor = AppColors.azulIntermedio;
                       }
                       
                       return Marker(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/tago_card.dart';
 
 // Esta pantalla muestra la colección de TaGos descubiertos por el usuario
@@ -46,9 +47,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.azulOscuro,
       appBar: AppBar(
-        title: const Text('Mi Biblioteca de TaGos', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('MI BIBLIOTECA DE TAGOS', style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2),),
         centerTitle: true,
+        backgroundColor: AppColors.azulOscuro,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _fetchMyLibrary(),
@@ -64,7 +67,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 child: Text(
                   "Error de conexión con la biblioteca. Comprueba que el servidor está activo.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: AppColors.error),
                 ),
               ),
             );
@@ -77,13 +80,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.auto_stories, size: 80, color: Colors.grey.shade300),
+                  Icon(Icons.auto_stories, size: 80, color: AppColors.azulStamps),
                   const SizedBox(height: 20),
                   const Text(
                     "¡Tu biblioteca está vacía!",
-                    style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 18, color: AppColors.azulStamps, fontWeight: FontWeight.w500),
                   ),
-                  const Text("¡Escanea un TaGo para empezar!"),
+                  SizedBox(height: 10),
+                  const Text("¡Escanea un TaGo para empezar!", style: TextStyle(fontSize: 18, color: AppColors.azulStamps),),
                 ],
               ),
             );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/database_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/image_helper.dart';
 
 class ManageAdminsScreen extends StatefulWidget {
@@ -198,7 +199,11 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     final filteredTagos = _getFilteredTagos();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Administración")),
+      backgroundColor: AppColors.azulOscuro,
+      appBar: AppBar(
+        title: const Text("ADMINISTRACIÓN", style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2)),
+        backgroundColor: AppColors.azulOscuro,
+      ),
       body: Column(
         children: [
           Padding(
@@ -220,19 +225,32 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
+              style: const TextStyle(color: AppColors.blancoTexto),
+              cursorColor: AppColors.doradoClaro,
               decoration: InputDecoration(
+                hintStyle: const TextStyle(color: AppColors.azulStamps),
                 hintText: _isUsuariosTab ? "Buscar por usuario..." : "Buscar por título...",
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty 
-                  ? IconButton(
-                      icon: const Icon(Icons.clear), 
-                      onPressed: () {
-                        _searchController.clear();
-                        _onSearchChanged("");
-                      }
-                    ) 
-                  : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                prefixIcon: const Icon(Icons.search, color: AppColors.azulStamps),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                    icon: const Icon(Icons.clear, color: AppColors.azulStamps),
+                    onPressed: () {
+                      _searchController.clear();
+                      _onSearchChanged("");
+                    }
+                )
+                    : null,
+                // Borde cuando NO está seleccionado
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
+                ),
+                // Borde cuando haces clic
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
+                ),
+
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
             ),
@@ -250,8 +268,8 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
   Widget _tabButton(String text, bool isSelected, VoidCallback onTap) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Colors.blue : Colors.grey[300],
-        foregroundColor: isSelected ? Colors.white : Colors.black,
+        backgroundColor: isSelected ? AppColors.doradoClaro : AppColors.azulContenedor,
+        foregroundColor: isSelected ? AppColors.azulOscuro : AppColors.doradoClaro,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       onPressed: onTap,
@@ -286,10 +304,12 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
         backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
         child: photoUrl == null ? const Icon(Icons.person) : null,
       ),
-      title: Text(name),
+      title: Text(name, style: TextStyle(color: AppColors.blancoTexto),),
       trailing: Switch(
         value: isAdmin,
-        activeColor: Colors.blue,
+        inactiveThumbColor: AppColors.azulContenedor,
+        inactiveTrackColor: AppColors.azulStamps,
+        activeColor: AppColors.doradoClaro,
         onChanged: (value) async {
           setState(() {
             final realIndex = _usuariosData.indexWhere((u) => u['id'] == uid);
@@ -325,19 +345,19 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
         ),
         child: imagenUrl == null ? const Icon(Icons.image) : null,
       ),
-      title: Text(titulo),
-      subtitle: isCritical ? Text("Reportes: $reportes", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)) : null,
+      title: Text(titulo, style: TextStyle(color: AppColors.blancoTexto), maxLines: 2, overflow: TextOverflow.ellipsis),
+      subtitle: isCritical ? Text("Reportes: $reportes", style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isCritical)
             IconButton(
-              icon: const Icon(Icons.build, color: Colors.green),
+              icon: const Icon(Icons.build, color: AppColors.doradoClaro),
               tooltip: "Marcar como arreglado",
               onPressed: () => _resetReportes(id),
             ),
-          IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editTagoDialog(id, tagoData)),
-          IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteTagoDialog(id)),
+          IconButton(icon: const Icon(Icons.edit, color: AppColors.azulClaro), onPressed: () => _editTagoDialog(id, tagoData)),
+          IconButton(icon: Icon(Icons.delete, color: AppColors.rojoSuave), onPressed: () => _deleteTagoDialog(id)),
         ],
       ),
     );
@@ -373,35 +393,63 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(builder: (context, setDialogState) {
         return AlertDialog(
-          title: const Text("Editar TaGo"),
+          backgroundColor: AppColors.azulContenedor,
+          title: const Text(
+            "Editar TaGo",
+            style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Contenedor de Imagen con estilo de la app
                 GestureDetector(
                   onTap: () async {
                     final file = await ImageHelper.mostrarSelector(context);
                     if (file != null) setDialogState(() => newImage = file);
                   },
                   child: Container(
-                    width: 100, height: 100,
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(10)),
-                    child: newImage != null ? Image.file(newImage!, fit: BoxFit.cover) : 
-                           (currentImageUrl != null ? Image.network(currentImageUrl, fit: BoxFit.cover) : const Icon(Icons.add_a_photo)),
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.doradoClaro, width: 2),
+                      borderRadius: BorderRadius.circular(15),
+                      color: AppColors.azulOscuro,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: newImage != null
+                          ? Image.file(newImage!, fit: BoxFit.cover)
+                          : (currentImageUrl != null
+                          ? Image.network(currentImageUrl, fit: BoxFit.cover)
+                          : const Icon(Icons.add_a_photo, color: AppColors.doradoClaro)),
+                    ),
                   ),
                 ),
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: "Título")),
-                TextField(controller: descController, decoration: const InputDecoration(labelText: "Descripción"), maxLines: 3),
-                TextField(controller: hintController, decoration: const InputDecoration(labelText: "Pista"), maxLines: 2),
+                const SizedBox(height: 20),
+
+                // Inputs con estilo personalizado
+                _buildEditField(titleController, "Título"),
+                _buildEditField(descController, "Descripción", maxLines: 3),
+                _buildEditField(hintController, "Pista", maxLines: 2),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar", style: TextStyle(color: AppColors.blancoTexto)),
+            ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.doradoClaro,
+                foregroundColor: AppColors.azulOscuro,
+              ),
               onPressed: () async {
                 String? finalImageUrl = currentImageUrl;
-                if (newImage != null) finalImageUrl = await _dbService.subirImagenMarcador(id, newImage!);
+                if (newImage != null) {
+                  finalImageUrl = await _dbService.subirImagenMarcador(id, newImage!);
+                }
                 await FirebaseFirestore.instance.collection('marcadores').doc(id).update({
                   'titulo': titleController.text,
                   'descripcion': descController.text,
@@ -419,7 +467,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
                 });
                 if (context.mounted) Navigator.pop(context);
               },
-              child: const Text("Guardar"),
+              child: const Text("Guardar", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -427,15 +475,52 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     );
   }
 
+// Widget auxiliar para no repetir código de estilo en los campos
+  Widget _buildEditField(TextEditingController controller, String label, {int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        style: const TextStyle(color: AppColors.blancoTexto),
+        cursorColor: AppColors.doradoClaro,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: AppColors.doradoClaro),
+          enabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: AppColors.doradoClaro),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: AppColors.doradoClaro, width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _deleteTagoDialog(String id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Confirmar borrado"),
-        content: const Text("¿Seguro que quieres borrar este tago?"),
+        backgroundColor: AppColors.azulContenedor, // Fondo coherente con el resto de la app
+        title: const Text(
+            "Confirmar borrado",
+            style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold)
+        ),
+        content: const Text(
+            "¿Seguro que quieres borrar este tago?",
+            style: TextStyle(color: AppColors.blancoTexto)
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
           TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar", style: TextStyle(color: AppColors.blancoTexto))
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.rojoSuave,
+              foregroundColor: AppColors.blancoTexto,
+            ),
             onPressed: () async {
               await FirebaseFirestore.instance.collection('marcadores').doc(id).delete();
               setState(() {
@@ -443,7 +528,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
               });
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text("Borrar", style: TextStyle(color: Colors.red)),
+            child: const Text("Borrar"),
           ),
         ],
       ),

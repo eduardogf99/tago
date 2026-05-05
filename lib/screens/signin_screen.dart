@@ -3,6 +3,8 @@ import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 
+import '../theme/app_colors.dart';
+
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
 
@@ -13,9 +15,9 @@ class SigninScreen extends StatefulWidget {
 class _SigninScreenState extends State<SigninScreen> {
   bool _acceptTerms = false;
   bool _isCheckingUser = false;
-  String? _usernameError; // Almacena el error de disponibilidad del servidor
+  String? _usernameError;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   final AuthService _authService = AuthService();
 
   final TextEditingController emailController = TextEditingController();
@@ -25,23 +27,24 @@ class _SigninScreenState extends State<SigninScreen> {
   final TextEditingController birthDateController = TextEditingController();
 
   Future<void> _ejecutarRegistro() async {
-    // 1. Validaciones básicas locales
     if (!_formKey.currentState!.validate()) return;
 
     if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes aceptar los términos y condiciones')),
+        const SnackBar(
+          content: Text('Debes aceptar los términos y condiciones'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
 
     setState(() {
       _isCheckingUser = true;
-      _usernameError = null; // Limpiamos error previo
+      _usernameError = null;
     });
-    
+
     try {
-      // 2. Intentamos el registro (el servicio comprobará la disponibilidad)
       await _authService.registrarUsuario(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
@@ -53,25 +56,22 @@ class _SigninScreenState extends State<SigninScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainScreen()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
       if (mounted) {
         final errorMsg = e.toString();
-        // 3. Si el error es de nombre en uso, lo mandamos al validador del campo
         if (errorMsg.contains('en uso')) {
           setState(() {
             _usernameError = 'El nombre de usuario ya está en uso';
           });
-          // Forzamos al formulario a redibujar los errores
           _formKey.currentState!.validate();
         } else {
-          // Otros errores (email, red, etc.) se muestran en SnackBar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorMsg),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }
@@ -81,7 +81,6 @@ class _SigninScreenState extends State<SigninScreen> {
     }
   }
 
-  // Función para el login con Google
   Future<void> _loginGoogle() async {
     try {
       final user = await _authService.iniciarSesionConGoogle();
@@ -89,13 +88,16 @@ class _SigninScreenState extends State<SigninScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const MainScreen()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error Google: ${e.toString()}")),
+          SnackBar(
+            content: Text("Error Google: ${e.toString()}"),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -104,195 +106,201 @@ class _SigninScreenState extends State<SigninScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.azulOscuro,
       appBar: AppBar(
-        title: const Text('Registrarse'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: const BackButton(color: AppColors.doradoClaro),
+        title: const Text(
+          'REGISTRO',
+          style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            child: Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Registrarse',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              decoration: BoxDecoration(
+                color: AppColors.azulContenedor,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: AppColors.doradoClaro.withOpacity(0.2)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person_add_outlined, size: 60, color: AppColors.doradoClaro),
+                  const SizedBox(height: 20),
+
+                  // Botón Google
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
                       onPressed: _loginGoogle,
                       icon: const Icon(Icons.login),
-                      label: const Text('con google'),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    TextFormField(
-                      controller: emailController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, introduce un correo';
-                        }
-                        final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                        if (!emailRegExp.hasMatch(value)) {
-                          return 'Introduce un correo electrónico válido';
-                        }
-                        return null;
-                      },
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Correo electrónico',
-                        border: OutlineInputBorder(),
-                        hintText: 'ejemplo@correo.com',
+                      label: const Text('CONTINUAR CON GOOGLE'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.doradoClaro,
+                        side: const BorderSide(color: AppColors.doradoClaro),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    
-                    TextFormField(
-                      controller: userController,
-                      onChanged: (value) {
-                        // Limpiamos el error del servidor al empezar a escribir de nuevo
-                        if (_usernameError != null) {
-                          setState(() {
-                            _usernameError = null;
-                          });
-                        }
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, introduce un usuario';
-                        } else if (value.length < 3) {
-                          return 'El usuario debe tener al menos 3 caracteres';
-                        } else if (value.length > 15) {
-                          return 'El usuario no puede tener más de 15 caracteres';
-                        } else if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
-                          return 'El usuario solo puede contener letras y números';
-                        }
-                        if (_usernameError != null) {
-                          return _usernameError;
-                        }
-                        return null;
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Usuario',
-                        border: OutlineInputBorder(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: AppColors.azulStamps)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text("O", style: TextStyle(color: AppColors.azulStamps)),
                       ),
+                      Expanded(child: Divider(color: AppColors.azulStamps)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  _buildTextField(emailController, 'Correo electrónico', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+                  const SizedBox(height: 15),
+
+                  _buildTextField(userController, 'Usuario', Icons.person_outline, errorText: _usernameError),
+                  const SizedBox(height: 15),
+
+                  _buildTextField(passwordController, 'Contraseña', Icons.lock_outline, obscureText: true),
+                  const SizedBox(height: 15),
+
+                  _buildTextField(repeatPasswordController, 'Repetir Contraseña', Icons.lock_reset, obscureText: true, isRepeat: true),
+                  const SizedBox(height: 15),
+
+                  _buildDatePicker(),
+                  const SizedBox(height: 15),
+
+                  Theme(
+                    data: ThemeData(unselectedWidgetColor: AppColors.doradoClaro),
+                    child: CheckboxListTile(
+                      value: _acceptTerms,
+                      onChanged: (value) => setState(() => _acceptTerms = value ?? false),
+                      title: const Text('Acepto los términos y condiciones', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: AppColors.doradoClaro,
+                      checkColor: AppColors.azulOscuro,
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    const SizedBox(height: 15),
-                    
-                    TextFormField(
-                      controller: passwordController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, introduce una contraseña';
-                        } else if (value.length < 8) {
-                          return 'La contraseña debe tener al menos 8 caracteres';
-                        } else if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
-                          return 'La contraseña debe contener al menos una letra';
-                        } else if (!RegExp(r'[0-9]').hasMatch(value)) {
-                          return 'La contraseña debe contener al menos un número';
-                        }
-                        return null;
-                      },
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Contraseña',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    
-                    TextFormField(
-                      controller: repeatPasswordController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor, repite la contraseña';
-                        } else if (value != passwordController.text) {
-                          return 'Las contraseñas no coinciden';
-                        }
-                        return null;
-                      },
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Repetir Contraseña',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    
-                    TextFormField(
-                      controller: birthDateController,
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Fecha de nacimiento',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Selecciona tu fecha de nacimiento';
-                        }
-                        return null;
-                      },
-                      onTap: () async {
-                        DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime(2000),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (pickedDate != null) {
-                          birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _acceptTerms,
-                          onChanged: (value) {
-                            setState(() {
-                              _acceptTerms = value ?? false;
-                            });
-                          },
-                        ),
-                        const Expanded(
-                          child: Text('Acepto los términos y condiciones'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    _isCheckingUser 
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
+                  ),
+                  const SizedBox(height: 20),
+
+                  _isCheckingUser
+                      ? const CircularProgressIndicator(color: AppColors.doradoClaro)
+                      : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: _ejecutarRegistro,
-                      child: const Text('Registrarse'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.doradoClaro,
+                        foregroundColor: AppColors.azulOscuro,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('REGISTRARSE', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          (route) => false,
-                        );
-                      },
-                      child: const Text('¿Ya tienes cuenta? Inicia sesión'),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                            (route) => false,
+                      );
+                    },
+                    child: const Text('¿Ya tienes cuenta? Inicia sesión', style: TextStyle(color: AppColors.azulClaro)),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  // Helper para TextFields
+  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {bool obscureText = false, TextInputType? keyboardType, String? errorText, bool isRepeat = false}) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: Colors.white),
+      cursorColor: AppColors.doradoClaro,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.azulClaro),
+        prefixIcon: Icon(icon, color: AppColors.azulStamps),
+        errorText: errorText,
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.azulStamps)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 2)),
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) return 'Campo requerido';
+        if (label == 'Correo electrónico') {
+          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Email no válido';
+        }
+        if (label == 'Usuario') {
+          if (value.length < 3) return 'Mínimo 3 caracteres';
+          if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) return 'Solo letras y números';
+          if (_usernameError != null) return _usernameError;
+        }
+        if (label == 'Contraseña' && value.length < 8) return 'Mínimo 8 caracteres';
+        if (isRepeat && value != passwordController.text) return 'Las contraseñas no coinciden';
+        return null;
+      },
+    );
+  }
+
+  // Helper para DatePicker
+  Widget _buildDatePicker() {
+    return TextFormField(
+      controller: birthDateController,
+      readOnly: true,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: 'Fecha de nacimiento',
+        labelStyle: const TextStyle(color: AppColors.azulClaro),
+        prefixIcon: const Icon(Icons.calendar_today, color: AppColors.azulStamps),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.azulStamps)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2)),
+      ),
+      onTap: () async {
+        DateTime? pickedDate = await showDatePicker(
+          context: context,
+          initialDate: DateTime(2000),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.dark(
+                  primary: AppColors.doradoClaro,
+                  onPrimary: AppColors.azulOscuro,
+                  surface: AppColors.azulContenedor,
+                  onSurface: Colors.white,
+                ),
+                dialogBackgroundColor: AppColors.azulOscuro,
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (pickedDate != null) {
+          setState(() {
+            birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+          });
+        }
+      },
     );
   }
 }

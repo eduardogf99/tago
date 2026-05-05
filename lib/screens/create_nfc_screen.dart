@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import 'dart:typed_data';
 import '../services/database_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/image_helper.dart';
 
 class CreateNfcScreen extends StatefulWidget {
@@ -238,7 +239,12 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear TaGo')),
+      backgroundColor: AppColors.azulOscuro,
+      appBar: AppBar(
+        foregroundColor: AppColors.doradoClaro,
+        backgroundColor: AppColors.azulOscuro,
+        title: const Text('CREAR TAGO', style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2),)
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -248,18 +254,32 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
             children: [
               Text(
                 'Ubicación: ${widget.position.latitude.toStringAsFixed(4)}, ${widget.position.longitude.toStringAsFixed(4)}',
-                style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                style: const TextStyle(color: AppColors.azulClaro, fontStyle: FontStyle.italic),
               ),
               const SizedBox(height: 10),
-              const Text('Título del TaGo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Título del TaGo', style: TextStyle(color: AppColors.doradoClaro, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
+                style: TextStyle(color: AppColors.blancoTexto),
                 controller: _titleController,
-                decoration: const InputDecoration(hintText: 'Escribe un título', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  hintStyle: const TextStyle(color: AppColors.azulStamps),
+                  hintText: 'Escribe un título', border: const OutlineInputBorder(),
+                  // Borde cuando NO está seleccionado
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
+                  ),
+                  // Borde cuando haces clic
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
+                  ),
+                ),
                 validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
               const SizedBox(height: 20),
-              const Text('Imagen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Imagen', style: TextStyle(color: AppColors.doradoClaro, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Center(
                 child: GestureDetector(
@@ -268,8 +288,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                     width: 240,
                     height: 240,
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      border: Border.all(color: Colors.grey),
+                      color: AppColors.azulIntermedio,
+                      border: Border.all(color: AppColors.azulClaro, width: 4),
                       borderRadius: BorderRadius.circular(120),
                     ),
                     child: _image != null
@@ -280,30 +300,58 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                         : const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_a_photo, size: 50, color: Colors.grey),
+                              Icon(Icons.add_a_photo, size: 50, color: AppColors.azulClaro),
                               SizedBox(height: 8),
-                              Text('Pulsa para añadir una imagen', style: TextStyle(color: Colors.grey)),
+                              Text('Pulsa para añadir una imagen', style: TextStyle(color: AppColors.azulClaro)),
                             ],
                           ),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Descripción', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Descripción', style: TextStyle(color: AppColors.doradoClaro, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
+                style: TextStyle(color: AppColors.blancoTexto),
                 controller: _descriptionController,
                 maxLines: 5,
-                decoration: const InputDecoration(hintText: 'Escribe una breve descripción', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  hintStyle: const TextStyle(color: AppColors.azulStamps),
+                  hintText: 'Escribe una breve descripción', border: const OutlineInputBorder(),
+                  // Borde cuando NO está seleccionado
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
+                  ),
+                  // Borde cuando haces clic
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
+                  ),
+                ),
                 validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
               const SizedBox(height: 10),
-              const Text('Pista', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Pista', style: TextStyle(color: AppColors.doradoClaro, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               TextFormField(
+                style: TextStyle(color: AppColors.blancoTexto),
                 controller: _hintController,
                 maxLines: 2,
-                decoration: const InputDecoration(hintText: 'Escribe una pista para encontrarlo', border: OutlineInputBorder()),
+                decoration: InputDecoration(
+                  hintStyle: const TextStyle(color: AppColors.azulStamps),
+                  hintText: 'Escribe una pista para encontrarlo', border: const OutlineInputBorder(),
+                  // Borde cuando NO está seleccionado
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
+                  ),
+                  // Borde cuando haces clic
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
+                  ),
+                ),
                 validator: (v) => v!.isEmpty ? 'Campo obligatorio' : null,
               ),
               const SizedBox(height: 30),
@@ -313,12 +361,15 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 child: ElevatedButton(
                   onPressed: _handleCreateTaGo,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.doradoClaro,
+                    foregroundColor: AppColors.azulOscuro,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   child: const Text('Crear TaGo', style: TextStyle(fontSize: 16)),
                 ),
               ),
+              SizedBox(height: 40),
             ],
           ),
         ),

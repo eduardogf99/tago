@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:async';
 
+import '../theme/app_colors.dart';
+
 class OSMMapWidget extends StatefulWidget {
   final Function(LatLng)? onTap;
   final LatLng? selectedPosition;
@@ -162,7 +164,7 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                               child: Icon(
                                 Icons.arrow_drop_up,
                                 size: 50,
-                                color: Colors.blue.withOpacity(0.4),
+                                color: AppColors.azulStamps,
                               ),
                             ),
                           ),
@@ -170,9 +172,9 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                           width: 18,
                           height: 18,
                           decoration: BoxDecoration(
-                            color: Colors.blue,
+                            color: AppColors.azulIntermedio,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: AppColors.blancoTexto, width: 2),
                           ),
                         ),
                       ],
@@ -186,14 +188,14 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                     height: 40,
                     rotate: true,
                     alignment: Alignment.topCenter,
-                    child: const Icon(Icons.location_on_rounded, color: Colors.purple, size: 40),
+                    child: const Icon(Icons.location_on_rounded, color: AppColors.azulIntermedio, size: 40),
                   ),
               ],
             ),
           ],
         ),
         Positioned(
-          top: 20,
+          bottom: 40,
           right: 20,
           child: Column(
             children: [

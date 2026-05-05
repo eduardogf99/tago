@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 class AppNavigationBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -15,37 +17,38 @@ class AppNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      backgroundColor: new Color.fromRGBO(212, 175, 55, 1),
+      backgroundColor: AppColors.azulOscuro,
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
+      indicatorColor: AppColors.azulContenedor,
       destinations: [
         if(isAdmin)
           const NavigationDestination(
-            icon: Icon(Icons.add_circle_outline, color: Color.fromRGBO(122, 30, 44, 1),),
+            icon: Icon(Icons.add_circle_outline, color: AppColors.doradoClaro,),
             label: '',
           ),
 
         const NavigationDestination(
           icon: Icon(
             Icons.map,
-            color: Color.fromRGBO(122, 30, 44, 1),
+            color: AppColors.doradoClaro,
           ),
           label: '',
         ),
         const NavigationDestination(
           icon: Icon(
             Icons.menu_book,
-            color: Color.fromRGBO(122, 30, 44, 1),
+            color: AppColors.doradoClaro,
           ),
           label: '',
         ),
         if(isAdmin)
           const NavigationDestination(
-            icon: Icon(Icons.rebase_edit, color: Color.fromRGBO(122, 30, 44, 1),),
+            icon: Icon(Icons.rebase_edit, color: AppColors.doradoClaro),
             label: '',
           ),
         const NavigationDestination(
-          icon: Icon(Icons.person, color: Color.fromRGBO(122, 30, 44, 1),),
+          icon: Icon(Icons.person, color: AppColors.doradoClaro),
           label: '',
         ),
       ],

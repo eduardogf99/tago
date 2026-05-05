@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../theme/app_colors.dart';
 
 class ImageHelper {
   static final ImagePicker _picker = ImagePicker();
@@ -11,36 +12,57 @@ class ImageHelper {
   static Future<File?> mostrarSelector(BuildContext context) async {
     ImageSource? selectedSource;
 
-    // 1. Preguntamos la fuente (Cámara o Galería)
     await showModalBottomSheet(
       context: context,
+      backgroundColor: AppColors.azulOscuro, // Fondo del panel
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext bc) {
         return SafeArea(
           child: Wrap(
             children: <Widget>[
+              // Indicador superior decorativo
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 5),
+                  height: 4,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.azulClaro,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galería'),
+                leading: const Icon(Icons.photo_library, color: AppColors.doradoClaro),
+                title: const Text(
+                  'Galería',
+                  style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.w500),
+                ),
                 onTap: () {
                   selectedSource = ImageSource.gallery;
                   Navigator.of(context).pop();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Cámara'),
+                leading: const Icon(Icons.photo_camera, color: AppColors.doradoClaro),
+                title: const Text(
+                  'Cámara',
+                  style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.w500),
+                ),
                 onTap: () {
                   selectedSource = ImageSource.camera;
                   Navigator.of(context).pop();
                 },
               ),
+              const SizedBox(height: 10), // Espacio extra al final
             ],
           ),
         );
       },
     );
 
-    // 2. Si el usuario eligió una fuente, procesamos la imagen
     if (selectedSource != null) {
       return await _procesarImagen(context, selectedSource!);
     }
@@ -50,19 +72,16 @@ class ImageHelper {
   static Future<File?> _procesarImagen(BuildContext context, ImageSource source) async {
     final XFile? image = await _picker.pickImage(
       source: source,
-      // Bajamos un poco la calidad inicial desde el picker
-      imageQuality: 85, 
+      imageQuality: 85,
     );
-    
+
     if (image == null) return null;
 
-    // Preparamos la ruta para el archivo comprimido
     final String targetPath = p.join(
       (await getTemporaryDirectory()).path,
       'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
 
-    // Compresión real: limitamos dimensiones a 1024px y calidad al 70%
     XFile? compressedXFile = await FlutterImageCompress.compressAndGetFile(
       image.path,
       targetPath,
@@ -74,17 +93,16 @@ class ImageHelper {
     if (compressedXFile == null) return File(image.path);
 
     final File file = File(compressedXFile.path);
-    
-    // Validación de tamaño (10 MB)
+
     final int sizeInBytes = await file.length();
     const int maxSizeInBytes = 10 * 1024 * 1024;
 
     if (sizeInBytes > maxSizeInBytes) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('La imagen pesa más de 10 MB'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('La imagen pesa más de 10 MB'),
+            backgroundColor: AppColors.rojoSuave,
           ),
         );
       }
