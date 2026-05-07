@@ -5,7 +5,7 @@ class MapMarkerModel {
   final String id;
   final String title;
   final LatLng position;
-  final String? imagenUrl; // Añadido para poder mostrar la foto en la biblioteca
+  final String? imagenUrl;
 
   MapMarkerModel({
     required this.id,
@@ -18,7 +18,7 @@ class MapMarkerModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'titulo': title, // Usamos 'titulo' para que coincida con el backend
+      'titulo': title,
       'lat': position.latitude,
       'lng': position.longitude,
       'imagenUrl': imagenUrl,

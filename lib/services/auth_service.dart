@@ -19,7 +19,7 @@ class AuthService {
   // Obtener el ID del usuario actual
   String? get currentUid => _auth.currentUser?.uid;
 
-  // Obtener los datos del usuario actual (Migrado para usar DatabaseService/REST)
+  // Obtener los datos del usuario actual
   Future<UserModel?> getUserData() async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -28,13 +28,13 @@ class AuthService {
     return null;
   }
 
-  // Verifica si un nombre de usuario ya existe (Migrado para usar DatabaseService/REST)
+  // Verifica si un nombre de usuario ya existe
   Future<bool> usuarioExiste(String usuario) async {
     final usuarios = await _dbService.obtenerTodosLosUsuarios();
     return usuarios.any((u) => u.usuario.toLowerCase() == usuario.toLowerCase());
   }
 
-  // Registro con Email y Contraseña (Migrado para usar DatabaseService/REST)
+  // Registro con Email y Contraseña
   Future<UserCredential> registrarUsuario({
     required String email,
     required String password,
@@ -52,7 +52,7 @@ class AuthService {
       password: password,
     );
 
-    // 3. Crear el documento usando nuestro servicio (que pasa por la API REST)
+    // 3. Crear el documento usando nuestro servicio
     UserModel nuevoUsuario = UserModel(
       uid: result.user!.uid,
       email: email,
@@ -65,7 +65,7 @@ class AuthService {
     return result;
   }
 
-  // Inicio de Sesión con Email/Usuario (Migrado para usar DatabaseService/REST)
+  // Inicio de Sesión con Email/Usuario
   Future<void> iniciarSesion(String input, String password) async {
     String email = input;
     if (!input.contains('@')) {
@@ -77,7 +77,7 @@ class AuthService {
     await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  // Inicio de sesión con google (Migrado para usar DatabaseService/REST)
+  // Inicio de sesión con google
   Future<UserCredential?> iniciarSesionConGoogle() async {
     try {
       // 1. Iniciar el selector de cuentas de Google
@@ -96,7 +96,7 @@ class AuthService {
       // 4. Iniciar sesión en Firebase
       UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // 5. Si es un usuario nuevo, crear su ficha a través de nuestra API REST
+      // 5. Si es un usuario nuevo, crear su ficha a través de API REST
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
         UserModel nuevoUsuario = UserModel(
           uid: userCredential.user!.uid,

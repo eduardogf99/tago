@@ -169,16 +169,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Hardware NFC no detectado"),
-        content: const Text("Parece que estás en un emulador o tu móvil no tiene NFC. ¿Quieres simular la creación del TaGo para probar la base de datos?"),
+        content: const Text("Parece que su dispositivo no tiene activada la opción de NFC"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _processTagoCreation(tagoId, title, description, hint);
-            }, 
-            child: const Text("Simular creación")
-          ),
         ],
       ),
     );
