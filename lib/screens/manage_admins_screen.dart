@@ -499,36 +499,54 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
   }
 
   void _deleteTagoDialog(String id) {
+    // Obtenemos los datos del tago para saber quién es el creador antes de borrarlo
+    final tagoData = _tagosData.firstWhere((t) => t['id'] == id);
+    final String creadorId = tagoData['creadorId'] ?? '';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.azulContenedor, // Fondo coherente con el resto de la app
-        title: const Text(
-            "Confirmar borrado",
-            style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold)
-        ),
+        backgroundColor: AppColors.azulContenedor,
+        title: const Text("Confirmar borrado total",
+            style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold)),
         content: const Text(
-            "¿Seguro que quieres borrar este tago?",
-            style: TextStyle(color: AppColors.blancoTexto)
-        ),
+          style: TextStyle(color: AppColors.blancoTexto),
+            "Se borrará el TaGo, esta acción no se puede deshacer. ¿Seguro que quieres proceder?"),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar", style: TextStyle(color: AppColors.blancoTexto))
-          ),
+              child: const Text("Cancelar", style: TextStyle(color: AppColors.blancoTexto))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.rojoSuave,
-              foregroundColor: AppColors.blancoTexto,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojoSuave),
             onPressed: () async {
-              await FirebaseFirestore.instance.collection('marcadores').doc(id).delete();
-              setState(() {
-                _tagosData.removeWhere((t) => t['id'] == id);
-              });
-              if (context.mounted) Navigator.pop(context);
+              // Mostrar un indicador de carga ya que esto puede tardar unos segundos
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                // Llamamos a la lógica pesada en el servicio
+                await _dbService.eliminarTagoCompleto(id, creadorId);
+
+                setState(() {
+                  _tagosData.removeWhere((t) => t['id'] == id);
+                });
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("TaGo y escaneos eliminados correctamente")),
+                  );
+                }
+              } catch (e) {
+                if (mounted) Navigator.pop(context);
+                debugPrint("Error al eliminar: $e");
+              }
             },
-            child: const Text("Borrar"),
+            child: const Text( style: TextStyle(color: AppColors.blancoTexto), "Borrar"),
           ),
         ],
       ),

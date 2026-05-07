@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tfg/screens/manage_admins_screen.dart';
+import 'package:tfg/screens/ranking_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'map_screen.dart';
 import 'profile_screen.dart';
@@ -65,6 +66,7 @@ class _MainScreenState extends State<MainScreen> {
       const MapScreen(),
       const LibraryScreen(),
       if (_isAdmin) const ManageAdminsScreen(),
+      const RankingScreen(),
       const ProfileScreen(),
     ];
 

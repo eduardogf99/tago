@@ -5,7 +5,8 @@ class UserModel {
   final String fechaNacimiento;
   final String? photoUrl;
   final bool isAdmin;
-  final List<String> paisesDescubiertos; // Nuevo campo
+  final List<String> paisesDescubiertos;
+  final int totalEscaneos; // 1. Nuevo campo para el ranking
 
   UserModel({
     required this.uid,
@@ -15,6 +16,7 @@ class UserModel {
     this.photoUrl,
     this.isAdmin = false,
     this.paisesDescubiertos = const [],
+    this.totalEscaneos = 0, // 2. Valor por defecto al crear el objeto
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class UserModel {
       'photoUrl': photoUrl,
       'isAdmin': isAdmin,
       'paises_descubiertos': paisesDescubiertos,
+      'totalEscaneos': totalEscaneos,
     };
   }
 
@@ -38,6 +41,7 @@ class UserModel {
       photoUrl: map['photoUrl'],
       isAdmin: map['isAdmin'] ?? false,
       paisesDescubiertos: List<String>.from(map['paises_descubiertos'] ?? []),
+      totalEscaneos: map['totalEscaneos'] ?? 0,
     );
   }
 }

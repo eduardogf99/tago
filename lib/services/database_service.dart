@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -165,6 +166,8 @@ class DatabaseService {
     }
   }
 
+
+
   Future<bool> verificarEscaneo(String uid, String tagoId) async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/usuarios/$uid/escaneos/$tagoId'))
@@ -177,13 +180,34 @@ class DatabaseService {
   }
 
   Future<void> registrarEscaneo(String uid, String tagoId) async {
+    print("Intentando incrementar totalEscaneos para el UID: $uid");
+
     try {
-      await http.post(Uri.parse('$_baseUrl/usuarios/$uid/escaneos/$tagoId'))
-          .timeout(const Duration(seconds: 5));
-    } catch (e) {
-      await _db.collection('usuarios').doc(uid).collection('escaneos').doc(tagoId).set({
-        'fechaEscaneo': DateTime.now().toIso8601String()
+      WriteBatch batch = _db.batch();
+
+      // 1. Referencia al documento del usuario
+      // ASEGÚRATE de que uid sea exactamente el nombre del documento en la colección 'usuarios'
+      DocumentReference usuarioRef = _db.collection('usuarios').doc(uid);
+
+      // 2. Referencia al escaneo
+      DocumentReference escaneoRef = usuarioRef.collection('escaneos').doc(tagoId);
+
+      // Operación A: Crear el registro del escaneo
+      batch.set(escaneoRef, {
+        'fechaEscaneo': DateTime.now().toIso8601String(),
+        'tagoId': tagoId,
       });
+
+      // Operación B: Incrementar el contador
+      // Usamos set con merge por si el documento del usuario está vacío o el campo no existe
+      batch.set(usuarioRef, {
+        'totalEscaneos': FieldValue.increment(1),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+      print("Proceso completado./$uid'");
+    } catch (e) {
+      print("Error en registrarEscaneo: $e");
     }
   }
 
@@ -193,6 +217,48 @@ class DatabaseService {
       'tagoId': tagoId,
       'fechaCreacion': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> eliminarTagoCompleto(String tagoId, String creadorId) async {
+    try {
+      // 1. Borrar marcador y rastro del creador
+      WriteBatch batch = _db.batch();
+      batch.delete(_db.collection('marcadores').doc(tagoId));
+      batch.delete(_db.collection('usuarios').doc(creadorId).collection('creados').doc(tagoId));
+      await batch.commit();
+
+      // 2. Buscar en todos los usuarios (Collection Group)
+      // IMPORTANTE: Ve a la consola de Firebase -> Índices -> Índices de grupo de colecciones
+      // y crea uno para 'escaneos' con el campo 'tagoId'
+      QuerySnapshot usuariosConEseTago = await _db
+          .collectionGroup('escaneos')
+          .where('tagoId', isEqualTo: tagoId)
+          .get();
+
+      print("Se encontraron ${usuariosConEseTago.docs.length} usuarios con este tago escaneado");
+
+      if (usuariosConEseTago.docs.isNotEmpty) {
+        WriteBatch cleanupBatch = _db.batch();
+
+        for (var doc in usuariosConEseTago.docs) {
+          // doc.reference.parent es la colección 'escaneos'
+          // doc.reference.parent.parent es el documento del usuario
+          DocumentReference userRef = doc.reference.parent.parent!;
+
+          print("Restando punto al usuario: ${userRef.id}");
+
+          cleanupBatch.set(userRef, {
+            'totalEscaneos': FieldValue.increment(-1),
+          }, SetOptions(merge: true));
+
+          cleanupBatch.delete(doc.reference);
+        }
+
+        await cleanupBatch.commit();
+      }
+    } catch (e) {
+      print("Error en eliminarTagoCompleto: $e");
+    }
   }
 
   // --- SUBIDA DE IMÁGENES (Directo a Storage) ---

@@ -48,6 +48,13 @@ class AppNavigationBar extends StatelessWidget {
             label: '',
           ),
         const NavigationDestination(
+          icon: Icon(
+            Icons.leaderboard,
+            color: AppColors.doradoClaro,
+          ),
+          label: '',
+        ),
+        const NavigationDestination(
           icon: Icon(Icons.person, color: AppColors.doradoClaro),
           label: '',
         ),
