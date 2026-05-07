@@ -206,8 +206,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
 
     if (uid == null) throw Exception("No hay un usuario autenticado");
 
-    // Creamos el marcador en la colección global 'marcadores'
-    await _dbService.crearMarcador(id, {
+    Map<String, dynamic> tagoData = {
       'id': id,
       'titulo': title,
       'descripcion': description,
@@ -223,10 +222,13 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'creadorId': uid,
       'fechaCreacion': DateTime.now().toIso8601String(),
       'ultimoEscaneo': DateTime.now().toIso8601String(),
-    });
+    };
 
-    // Registramos el TaGo en la subcolección 'creados' del usuario
-    await _dbService.registrarTagoCreado(uid, id);
+    // USAR FUTURE.WAIT para asegurar que ambas escrituras terminan
+    await Future.wait([
+      _dbService.crearMarcador(id, tagoData),
+      _dbService.registrarTagoCreado(uid, id),
+    ]);
   }
 
   @override

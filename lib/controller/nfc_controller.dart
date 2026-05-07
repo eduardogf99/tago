@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
+import '../main.dart';
 import 'tago_controller.dart';
 
 class NfcController {
@@ -41,15 +42,26 @@ class NfcController {
     }
 
     NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      try {
-        var ndef = Ndef.from(tag);
-        if (ndef == null || ndef.cachedMessage == null) return;
-        String recordContent = String.fromCharCodes(ndef.cachedMessage!.records.first.payload);
-        onDataRead(recordContent);
-        NfcManager.instance.stopSession();
-      } catch (e) {
-        onDataRead("Error al leer: $e");
-        NfcManager.instance.stopSession(errorMessage: e.toString());
+      var ndef = Ndef.from(tag);
+      if (ndef != null && ndef.cachedMessage != null) {
+        final records = ndef.cachedMessage!.records;
+        if (records.isNotEmpty) {
+          // Forma segura de leer el texto quitando el prefijo de idioma (UTF-8)
+          final payload = records.first.payload;
+          final languageCodeLength = payload[0] & 0x3F;
+          final text = String.fromCharCodes(payload.sublist(1 + languageCodeLength));
+
+          // quitamos posibles espacios o saltos de línea
+          String scannedId = text.trim();
+
+          debugPrint("TaGo detectado con ID limpio: '$scannedId'");
+
+          final context = navigatorKey.currentContext;
+          if (context != null) {
+            // Ejecutamos el desbloqueo
+            TagoController.handleTagoUnlock(scannedId, context);
+          }
+        }
       }
     });
   }

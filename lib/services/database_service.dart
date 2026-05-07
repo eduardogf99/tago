@@ -38,7 +38,7 @@ class DatabaseService {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/marcadores'))
           .timeout(const Duration(seconds: 5));
-      
+
       if (response.statusCode == 200) {
         List<dynamic> body = json.decode(response.body);
         return body.map((item) => MapMarkerModel.fromMap(item)).toList();
@@ -54,7 +54,7 @@ class DatabaseService {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/marcadores'))
           .timeout(const Duration(seconds: 5));
-      
+
       if (response.statusCode == 200) {
         List<dynamic> body = json.decode(response.body);
         final tago = body.firstWhere((m) => m['id'] == id, orElse: () => null);
@@ -71,16 +71,20 @@ class DatabaseService {
   // Guardar un nuevo marcador
   Future<void> crearMarcador(String id, Map<String, dynamic> data) async {
     try {
+      // Intentar primero por la API (Backend centralizado)
       final response = await http.post(
         Uri.parse('$_baseUrl/marcadores'),
         headers: {"Content-Type": "application/json"},
         body: json.encode({"id": id, ...data}),
       ).timeout(const Duration(seconds: 5));
 
-      if (response.statusCode != 201) {
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        // Si la API falla explícitamente, intentamos respaldo directo
         await _db.collection('marcadores').doc(id).set(data);
       }
     } catch (e) {
+      print("Error llamando a la API, usando respaldo Firestore: $e");
+      // Respaldo manual
       await _db.collection('marcadores').doc(id).set(data);
     }
   }
@@ -151,13 +155,13 @@ class DatabaseService {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/usuarios/$uid/escaneos'))
           .timeout(const Duration(seconds: 5));
-      
+
       if (response.statusCode == 200) {
         List<dynamic> body = json.decode(response.body);
         // Devolvemos solo la lista de IDs
         return body.map((item) => item['id'] as String).toList();
       }
-      
+
       final snapshot = await _db.collection('usuarios').doc(uid).collection('escaneos').get();
       return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {
@@ -180,35 +184,44 @@ class DatabaseService {
   }
 
   Future<void> registrarEscaneo(String uid, String tagoId) async {
-    print("Intentando incrementar totalEscaneos para el UID: $uid");
-
     try {
-      WriteBatch batch = _db.batch();
+      // Llamamos al endpoint del backend que ya tiene programado el incremento
+      final response = await http.post(
+        Uri.parse('$_baseUrl/usuarios/$uid/escaneos/$tagoId'),
+        headers: {"Content-Type": "application/json"},
+      ).timeout(const Duration(seconds: 10));
 
-      // 1. Referencia al documento del usuario
-      // ASEGÚRATE de que uid sea exactamente el nombre del documento en la colección 'usuarios'
-      DocumentReference usuarioRef = _db.collection('usuarios').doc(uid);
-
-      // 2. Referencia al escaneo
-      DocumentReference escaneoRef = usuarioRef.collection('escaneos').doc(tagoId);
-
-      // Operación A: Crear el registro del escaneo
-      batch.set(escaneoRef, {
-        'fechaEscaneo': DateTime.now().toIso8601String(),
-        'tagoId': tagoId,
-      });
-
-      // Operación B: Incrementar el contador
-      // Usamos set con merge por si el documento del usuario está vacío o el campo no existe
-      batch.set(usuarioRef, {
-        'totalEscaneos': FieldValue.increment(1),
-      }, SetOptions(merge: true));
-
-      await batch.commit();
-      print("Proceso completado./$uid'");
+      if (response.statusCode == 201) {
+        print("Escaneo registrado con éxito vía API");
+      } else {
+        print("Error en API: ${response.body}. Intentando respaldo...");
+        // Respaldo manual si la API devuelve error
+        await _registrarEscaneoRespaldoDirecto(uid, tagoId);
+      }
     } catch (e) {
-      print("Error en registrarEscaneo: $e");
+      print("Error de red al registrar escaneo: $e");
+      // Si la API falla, intentamos el respaldo directo
+      await _registrarEscaneoRespaldoDirecto(uid, tagoId);
     }
+  }
+
+// Mueve tu lógica actual aquí como plan B
+  Future<void> _registrarEscaneoRespaldoDirecto(String uid, String tagoId) async {
+    WriteBatch batch = _db.batch();
+    DocumentReference usuarioRef = _db.collection('usuarios').doc(uid);
+    DocumentReference escaneoRef = usuarioRef.collection('escaneos').doc(tagoId);
+
+    batch.set(escaneoRef, {
+      'fechaEscaneo': DateTime.now().toIso8601String(),
+      'tagoId': tagoId,
+    });
+
+    // CORRECCIÓN: Se usa set con merge:true para asegurar que el documento se cree si no existe
+    batch.set(usuarioRef, {
+      'totalEscaneos': FieldValue.increment(1),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
   }
 
   // En tu DatabaseService
@@ -221,43 +234,27 @@ class DatabaseService {
 
   Future<void> eliminarTagoCompleto(String tagoId, String creadorId) async {
     try {
-      // 1. Borrar marcador y rastro del creador
-      WriteBatch batch = _db.batch();
-      batch.delete(_db.collection('marcadores').doc(tagoId));
-      batch.delete(_db.collection('usuarios').doc(creadorId).collection('creados').doc(tagoId));
-      await batch.commit();
+      // Intentar borrado vía API para limpieza global de contadores y borrado de 'creados'
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/marcadores/$tagoId'),
+      ).timeout(const Duration(seconds: 20));
 
-      // 2. Buscar en todos los usuarios (Collection Group)
-      // IMPORTANTE: Ve a la consola de Firebase -> Índices -> Índices de grupo de colecciones
-      // y crea uno para 'escaneos' con el campo 'tagoId'
-      QuerySnapshot usuariosConEseTago = await _db
-          .collectionGroup('escaneos')
-          .where('tagoId', isEqualTo: tagoId)
-          .get();
-
-      print("Se encontraron ${usuariosConEseTago.docs.length} usuarios con este tago escaneado");
-
-      if (usuariosConEseTago.docs.isNotEmpty) {
-        WriteBatch cleanupBatch = _db.batch();
-
-        for (var doc in usuariosConEseTago.docs) {
-          // doc.reference.parent es la colección 'escaneos'
-          // doc.reference.parent.parent es el documento del usuario
-          DocumentReference userRef = doc.reference.parent.parent!;
-
-          print("Restando punto al usuario: ${userRef.id}");
-
-          cleanupBatch.set(userRef, {
-            'totalEscaneos': FieldValue.increment(-1),
-          }, SetOptions(merge: true));
-
-          cleanupBatch.delete(doc.reference);
-        }
-
-        await cleanupBatch.commit();
+      if (response.statusCode != 200) {
+        throw Exception("Fallo en el servidor: ${response.body}");
       }
     } catch (e) {
-      print("Error en eliminarTagoCompleto: $e");
+      print("Error al eliminar tago vía API, ejecutando respaldo local: $e");
+
+      // Respaldo manual local: Borramos el marcador y su referencia en 'creados'
+      WriteBatch batch = _db.batch();
+
+      // 1. Borrar el marcador de la colección global
+      batch.delete(_db.collection('marcadores').doc(tagoId));
+
+      // 2. Borrar de la subcolección 'creados' del usuario autor
+      batch.delete(_db.collection('usuarios').doc(creadorId).collection('creados').doc(tagoId));
+
+      await batch.commit();
     }
   }
 

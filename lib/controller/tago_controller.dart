@@ -1,82 +1,73 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 import '../widgets/tago_dialogs.dart';
 
 class TagoController {
+  static final DatabaseService _dbService = DatabaseService();
+
   static Future<void> handleTagoUnlock(String scannedId, BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    final String cleanId = scannedId.trim();
+
     try {
-      // 1. Verificar si el Tago existe en la base de datos global
-      final tagoDocRef = FirebaseFirestore.instance.collection('marcadores').doc(scannedId);
-      final tagoDoc = await tagoDocRef.get();
-      
-      if (!tagoDoc.exists) {
-        debugPrint("TaGo con ID $scannedId no encontrado en Firestore");
-        return;
-      }
+      final tagoData = await _dbService.obtenerMarcadorPorId(cleanId);
+      if (tagoData == null) return;
 
-      final data = tagoDoc.data() as Map<String, dynamic>;
-      final String titulo = data['titulo'] ?? 'Sin título';
-      final String codigoPais = data['codigo_pais'] ?? '';
+      final String titulo = tagoData['titulo'] ?? 'Sin título';
+      final String codigoPais = tagoData['codigo_pais'] ?? '';
 
-      // Al escanearlo, reseteamos los reportes a 0 y actualizamos último escaneo global
-      // Usamos set con merge para asegurar que el campo se cree si no existe y se resetee siempre
-      await tagoDocRef.set({
-        'reportes': 0,
-        'ultimoEscaneo': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      // 2. Verificar si el usuario ya lo ha escaneado antes
       final userDocRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
-      final scanDocRef = userDocRef.collection('escaneos').doc(scannedId);
+      final scanDocRef = userDocRef.collection('escaneos').doc(cleanId);
+      
       final scanDoc = await scanDocRef.get();
 
-      // Siempre actualizamos la fecha de escaneo personal (o la creamos si es nuevo)
-      await scanDocRef.set({
-        'fechaEscaneo': FieldValue.serverTimestamp()
-      }, SetOptions(merge: true));
-
       if (!scanDoc.exists) {
-        // ES NUEVO: Lógica de país
+        // --- NUEVO DESCUBRIMIENTO ---
+        await _dbService.registrarEscaneo(user.uid, cleanId);
+
         bool esPrimerTagoDelPais = false;
         if (codigoPais.isNotEmpty) {
-          final userSnapshot = await userDocRef.get();
-          final userData = userSnapshot.data() as Map<String, dynamic>?;
-          List<dynamic> paisesDescubiertos = userData?['paises_descubiertos'] ?? [];
-          
-          if (!paisesDescubiertos.contains(codigoPais)) {
+          final userData = await _dbService.obtenerUsuario(user.uid);
+          List<dynamic> paises = userData?.paisesDescubiertos ?? [];
+          if (!paises.contains(codigoPais)) {
             esPrimerTagoDelPais = true;
-            await userDocRef.update({
+            await _dbService.actualizarUsuario(user.uid, {
               'paises_descubiertos': FieldValue.arrayUnion([codigoPais])
             });
           }
         }
 
-        // Mostrar el AlertDialog de "Nuevo TaGo desbloqueado" desde el widget especializado
         if (context.mounted) {
           TagoDialogs.mostrarNuevoDesbloqueo(
             context: context,
             titulo: titulo,
-            scannedId: scannedId,
+            scannedId: cleanId,
             esPrimerTagoDelPais: esPrimerTagoDelPais,
             codigoPais: codigoPais,
           );
         }
       } else {
-        // YA ESTABA DESBLOQUEADO: Mostrar aviso desde el widget especializado
+        // --- YA ESTABA ESCANEADO ---
+        // IMPORTANTE: Forzamos la escritura de 'tagoId' por si el registro es antiguo
+        await scanDocRef.set({
+          'tagoId': cleanId,
+          'fechaEscaneo': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         if (context.mounted) {
           TagoDialogs.mostrarYaDesbloqueado(
             context: context,
             titulo: titulo,
-            scannedId: scannedId,
+            scannedId: cleanId,
           );
         }
       }
     } catch (e) {
-      debugPrint("Error al procesar escaneo: $e");
+      debugPrint("Error en handleTagoUnlock: $e");
     }
   }
 }
