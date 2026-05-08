@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyACNhaKyFMJ3pGNFFLC3wm7t6uZU3Va04I',
+    apiKey: 'AIzaSyBHl5tNUPNnVdk2fHKHnmaodw2w_iTN0BM',
     appId: '1:1008380081377:web:526425268b6c3a5bedf3a0',
     messagingSenderId: '1008380081377',
     projectId: 'tago-ec338',
@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB80tSTRXywKNHjgResqmKf8skCGbO7SJA',
+    apiKey: 'AIzaSyAHPwbSId5Poleuxt0HyIS6m6vICqT4EYg',
     appId: '1:1008380081377:android:4884c86665a9645fedf3a0',
     messagingSenderId: '1008380081377',
     projectId: 'tago-ec338',
@@ -61,27 +61,31 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAWgTfJP-YzG_ZYd8jpPQGe_K2d8EUpzD4',
+    apiKey: 'AIzaSyDLLKVxFj0XkZGOUExtF4W_LHXOG9uSOmU',
     appId: '1:1008380081377:ios:b28fd1b08b68784fedf3a0',
     messagingSenderId: '1008380081377',
     projectId: 'tago-ec338',
     databaseURL: 'https://tago-ec338-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'tago-ec338.firebasestorage.app',
+    androidClientId: '1008380081377-45d9m0mai74g05ilmk8nfvc50ofukkum.apps.googleusercontent.com',
+    iosClientId: '1008380081377-2d9jmu7r43roqeeiei33ja6o2803qmat.apps.googleusercontent.com',
     iosBundleId: 'com.example.tfg',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAWgTfJP-YzG_ZYd8jpPQGe_K2d8EUpzD4',
+    apiKey: 'AIzaSyDLLKVxFj0XkZGOUExtF4W_LHXOG9uSOmU',
     appId: '1:1008380081377:ios:b28fd1b08b68784fedf3a0',
     messagingSenderId: '1008380081377',
     projectId: 'tago-ec338',
     databaseURL: 'https://tago-ec338-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'tago-ec338.firebasestorage.app',
+    androidClientId: '1008380081377-45d9m0mai74g05ilmk8nfvc50ofukkum.apps.googleusercontent.com',
+    iosClientId: '1008380081377-2d9jmu7r43roqeeiei33ja6o2803qmat.apps.googleusercontent.com',
     iosBundleId: 'com.example.tfg',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyACNhaKyFMJ3pGNFFLC3wm7t6uZU3Va04I',
+    apiKey: 'AIzaSyBHl5tNUPNnVdk2fHKHnmaodw2w_iTN0BM',
     appId: '1:1008380081377:web:26c7f633481c620aedf3a0',
     messagingSenderId: '1008380081377',
     projectId: 'tago-ec338',
