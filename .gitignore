@@ -47,5 +47,4 @@ app.*.map.json
 
 #para la apikey
 local.properties
-
 /lib/firebase_options.dart
