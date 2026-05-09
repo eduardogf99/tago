@@ -15,7 +15,7 @@ class NfcController {
         if (ndef != null && ndef.cachedMessage != null) {
           final records = ndef.cachedMessage!.records;
           if (records.isNotEmpty) {
-            // Extraemos los datos del chip
+            // Extraemos los datos
             String payload = String.fromCharCodes(records.first.payload);
             // El primer byte de NDEF suele ser el código de idioma, lo saltamos
             String scannedId = payload.substring(records.first.payload[0] + 1);
@@ -33,7 +33,6 @@ class NfcController {
     }
   }
 
-  // Método para una sesión puntual (usado por ejemplo al crear un TaGo)
   void startSession({required Function(String) onDataRead}) async {
     bool isAvailable = await NfcManager.instance.isAvailable();
     if (!isAvailable) {
@@ -58,7 +57,6 @@ class NfcController {
 
           final context = navigatorKey.currentContext;
           if (context != null) {
-            // Ejecutamos el desbloqueo
             TagoController.handleTagoUnlock(scannedId, context);
           }
         }

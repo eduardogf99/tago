@@ -87,9 +87,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       await _saveToBackend(tagoId, title, description, hint, _image);
       
       if (mounted) {
-        Navigator.pop(context); // Cerrar diálogo de carga
+        Navigator.pop(context);
         
-        // Pequeño delay para asegurar que la navegación no choca con el SnackBar
+        // Paequeño delay para asegurar que la navegación no choca con el SnackBar
         Future.delayed(Duration.zero, () {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -98,13 +98,13 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            Navigator.pop(context); // Volver al mapa (MapAdminScreen)
+            Navigator.pop(context);
           }
         });
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Cerrar diálogo de carga
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
         );
@@ -147,8 +147,8 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
           await NfcManager.instance.stopSession();
           
           if (mounted) {
-            Navigator.pop(context); // Cerrar diálogo NFC
-            // Iniciamos la subida a base de datos
+            Navigator.pop(context);
+            // subida a base de datos
             await _processTagoCreation(tagoId, title, description, hint);
           }
         } catch (e) {
@@ -224,7 +224,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'ultimoEscaneo': DateTime.now().toIso8601String(),
     };
 
-    // USAR FUTURE.WAIT para asegurar que ambas escrituras terminan
+    // usamos Future.wait para asegurar que ambas escrituras terminan
     await Future.wait([
       _dbService.crearMarcador(id, tagoData),
       _dbService.registrarTagoCreado(uid, id),

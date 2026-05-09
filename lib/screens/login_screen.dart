@@ -10,7 +10,6 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Fondo oscuro general de la app
       backgroundColor: AppColors.azulOscuro,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -30,7 +29,6 @@ class LoginScreen extends StatelessWidget {
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              // Sustituimos Card por un Container estilizado
               padding: const EdgeInsets.all(24.0),
               decoration: BoxDecoration(
                 color: AppColors.azulContenedor,
@@ -50,7 +48,6 @@ class LoginScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Logo o Icono representativo arriba del formulario
                   const Icon(
                     Icons.language_outlined,
                     size: 80,
@@ -69,8 +66,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 30),
 
-                  // Widget que contiene los TextFields y botones de login
-                  // Nota: Asegúrate de que LoginForm también use AppColors
+                  // widget de login
                   const LoginForm(),
 
                   const SizedBox(height: 20),

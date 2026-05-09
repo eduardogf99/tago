@@ -60,7 +60,7 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
 
-    // Definición de las pantallas que componen el menú inferior
+    // Definición de las pantallas que componen al appNavigationBar
     final List<Widget> pages = [
       if (_isAdmin) const MapAdminScreen(),
       const MapScreen(),

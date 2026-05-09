@@ -19,6 +19,7 @@ class TagoController {
 
       final String titulo = tagoData['titulo'] ?? 'Sin título';
       final String codigoPais = tagoData['codigo_pais'] ?? '';
+      final String? imagenUrl = tagoData['imagenUrl']; // Extraemos la imagen
 
       final userDocRef = FirebaseFirestore.instance.collection('usuarios').doc(user.uid);
       final scanDocRef = userDocRef.collection('escaneos').doc(cleanId);
@@ -26,7 +27,7 @@ class TagoController {
       final scanDoc = await scanDocRef.get();
 
       if (!scanDoc.exists) {
-        // --- NUEVO DESCUBRIMIENTO ---
+        // NUEVO DESCUBRIMIENTO
         await _dbService.registrarEscaneo(user.uid, cleanId);
 
         bool esPrimerTagoDelPais = false;
@@ -48,11 +49,11 @@ class TagoController {
             scannedId: cleanId,
             esPrimerTagoDelPais: esPrimerTagoDelPais,
             codigoPais: codigoPais,
+            imagenUrl: imagenUrl, // Pasamos la imagen
           );
         }
       } else {
-        // --- YA ESTABA ESCANEADO ---
-        // IMPORTANTE: Forzamos la escritura de 'tagoId' por si el registro es antiguo
+        // YA ESTABA ESCANEADO
         await scanDocRef.set({
           'tagoId': cleanId,
           'fechaEscaneo': FieldValue.serverTimestamp(),
@@ -63,6 +64,7 @@ class TagoController {
             context: context,
             titulo: titulo,
             scannedId: cleanId,
+            imagenUrl: imagenUrl, // Pasamos la imagen
           );
         }
       }

@@ -41,18 +41,18 @@ class AuthService {
     required String usuario,
     required String fechaNacimiento,
   }) async {
-    // 1. Verificar si el nombre de usuario ya existe
+    // Verificar si el nombre de usuario ya existe
     if (await usuarioExiste(usuario)) {
       throw 'El nombre de usuario ya está en uso';
     }
 
-    // 2. Crear el usuario en Firebase Auth
+    // Crear el usuario en Firebase Auth
     UserCredential result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
-    // 3. Crear el documento usando nuestro servicio
+    // Crear el documento usando nuestro servicio
     UserModel nuevoUsuario = UserModel(
       uid: result.user!.uid,
       email: email,
@@ -80,23 +80,23 @@ class AuthService {
   // Inicio de sesión con google
   Future<UserCredential?> iniciarSesionConGoogle() async {
     try {
-      // 1. Iniciar el selector de cuentas de Google
+      // Iniciar el selector de cuentas de Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
 
-      // 2. Obtener los detalles de autenticación
+      // Obtener los detalles de autenticación
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // 3. Crear la credencial para Firebase
+      // Crear la credencial para Firebase
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 4. Iniciar sesión en Firebase
+      // Iniciar sesión en Firebase
       UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // 5. Si es un usuario nuevo, crear su ficha a través de API REST
+      // Si es un usuario nuevo, crear su ficha a través de API REST
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
         UserModel nuevoUsuario = UserModel(
           uid: userCredential.user!.uid,
@@ -115,13 +115,11 @@ class AuthService {
     }
   }
 
-  // Cerrar Sesión
   Future<void> cerrarSesion() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  // Restablecer Contraseña
   Future<void> restablecerContrasena(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }

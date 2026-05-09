@@ -143,7 +143,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     if (currentUid == null) return;
 
     try {
-      // AHORA filtramos por creadorId (el UID del usuario logueado)
+      // filtramos por creadorId
       Query query = FirebaseFirestore.instance
           .collection('marcadores')
           .where('creadorId', isEqualTo: currentUid);
@@ -402,7 +402,6 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Contenedor de Imagen con estilo de la app
                 GestureDetector(
                   onTap: () async {
                     final file = await ImageHelper.mostrarSelector(context);
@@ -428,7 +427,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Inputs con estilo personalizado
+                // funcion que construye los campos
                 _buildEditField(titleController, "Título"),
                 _buildEditField(descController, "Descripción", maxLines: 3),
                 _buildEditField(hintController, "Pista", maxLines: 2),
@@ -475,7 +474,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
     );
   }
 
-// Widget auxiliar para no repetir código de estilo en los campos
+// Widget para no repetir código de estilo en los campos
   Widget _buildEditField(TextEditingController controller, String label, {int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -519,7 +518,7 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.rojoSuave),
             onPressed: () async {
-              // Mostrar un indicador de carga ya que esto puede tardar unos segundos
+              // Mostrar un indicador de carga
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -527,7 +526,6 @@ class _ManageAdminsScreenState extends State<ManageAdminsScreen> {
               );
 
               try {
-                // Llamamos a la lógica pesada en el servicio
                 await _dbService.eliminarTagoCompleto(id, creadorId);
 
                 setState(() {

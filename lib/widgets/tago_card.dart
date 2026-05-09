@@ -13,7 +13,6 @@ class TagoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Al tocar la tarjeta, enviamos al usuario a la pantalla de detalle del TaGo
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -36,7 +35,7 @@ class TagoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // PARTE SUPERIOR: Imagen con bordes redondeados arriba
+            //Imagen con bordes redondeados
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -56,7 +55,7 @@ class TagoCard extends StatelessWidget {
                       ),
               ),
             ),
-            // PARTE INFERIOR: Título del TaGo
+            // Título del TaGo
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(

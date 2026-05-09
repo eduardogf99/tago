@@ -32,13 +32,12 @@ class _RankingScreenState extends State<RankingScreen> {
       }
     });
   }
-
+  // carga de ranking
   Future<void> _fetchRanking() async {
     if (_isLoading || !_hasMore) return;
     setState(() => _isLoading = true);
 
     try {
-      // USAMOS EL NUEVO CAMPO: Ordenamos por totalEscaneos de mayor a menor
       Query query = FirebaseFirestore.instance
           .collection('usuarios')
           .orderBy('totalEscaneos', descending: true);

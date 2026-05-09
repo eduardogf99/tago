@@ -24,7 +24,7 @@ class _MapAdminScreenState extends State<MapAdminScreen> {
     );
   }
 
-  // Nueva función para obtener la ubicación actual directamente
+  // obtener la ubicación actual
   Future<void> _useCurrentLocation() async {
     try {
       Position position = await Geolocator.getCurrentPosition();

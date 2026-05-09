@@ -25,7 +25,6 @@ class _MapMarkerWidgetState extends State<MapMarkerWidget> {
         alignment: Alignment.center,
         clipBehavior: Clip.none, // Permite que el texto sobresalga del marcador
         children: [
-          // Icono del marcador
           const Icon(
             Icons.location_on_rounded,
             color: Colors.red,

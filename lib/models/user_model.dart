@@ -6,7 +6,7 @@ class UserModel {
   final String? photoUrl;
   final bool isAdmin;
   final List<String> paisesDescubiertos;
-  final int totalEscaneos; // 1. Nuevo campo para el ranking
+  final int totalEscaneos;
 
   UserModel({
     required this.uid,
@@ -16,7 +16,7 @@ class UserModel {
     this.photoUrl,
     this.isAdmin = false,
     this.paisesDescubiertos = const [],
-    this.totalEscaneos = 0, // 2. Valor por defecto al crear el objeto
+    this.totalEscaneos = 0,
   });
 
   Map<String, dynamic> toMap() {

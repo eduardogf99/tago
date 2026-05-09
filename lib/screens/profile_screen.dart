@@ -304,10 +304,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 25),
 
-                          FutureBuilder<int>( // Ahora solo necesitamos contar los 'creados' si no tienen contador
+                          FutureBuilder<int>( // contamos los creados
                             future: _getCount(uid, 'creados'),
                             builder: (context, creadosSnapshot) {
-                              // Usamos directamente user.totalEscaneos que viene de obtenerUsuario(uid)
                               String escaneados = user.totalEscaneos.toString();
                               String creados = creadosSnapshot.hasData ? creadosSnapshot.data!.toString() : "...";
 

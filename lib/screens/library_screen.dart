@@ -4,7 +4,9 @@ import '../services/database_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/tago_card.dart';
 
-// Esta pantalla muestra la colección de TaGos descubiertos por el usuario
+// Biblioteca que muestra los tagos que el usuario ha escaneado
+
+
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
 
@@ -22,14 +24,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (uid == null) return [];
 
     try {
-      // 1. Obtener la lista de IDs escaneados desde la API
+      // obtenemos la lista de ids escaneados desde la API
       final List<String> escaneosIds = await _dbService.obtenerEscaneosUsuario(uid);
       if (escaneosIds.isEmpty) return [];
 
-      // 2. Obtener todos los marcadores para filtrar por ID
+      // obtenemos todos los marcadores para filtrar por id
       final allMarkers = await _dbService.obtenerMarcadores();
       
-      // 3. Cruzamos los datos y devolvemos la lista formateada
+      // devolvemos la lista
       return allMarkers
           .where((m) => escaneosIds.contains(m.id))
           .map((m) => {
@@ -93,7 +95,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
             );
           }
 
-          // Pintamos la cuadrícula usando el componente reutilizable TagoCard
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

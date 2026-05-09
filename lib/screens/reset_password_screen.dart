@@ -25,10 +25,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Se ha enviado un correo para restablecer tu contraseña.'),
-              backgroundColor: AppColors.azulStamps, // Color informativo coherente
+              backgroundColor: AppColors.azulStamps,
             ),
           );
-          Navigator.pop(context); // Volver al login
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
@@ -67,7 +67,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         child: Center(
           child: SingleChildScrollView(
             child: Container(
-              // Sustituimos Card por nuestro contenedor Passport
               padding: const EdgeInsets.all(24.0),
               decoration: BoxDecoration(
                 color: AppColors.azulContenedor,
@@ -105,7 +104,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Campo de Email Estilizado
+                    // Campo de Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,

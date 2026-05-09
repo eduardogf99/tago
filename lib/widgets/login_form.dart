@@ -106,7 +106,7 @@ class _LoginFormState extends State<LoginForm> {
         ),
         const SizedBox(height: 25),
 
-        // Botón de Google (Secundario)
+        // Botón de Google
         if (!_isLoading) ...[
           OutlinedButton.icon(
             onPressed: _loginGoogle,
@@ -122,7 +122,7 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 15),
         ],
 
-        // Botón de Aceptar (Principal)
+        // Botón de Aceptar
         _isLoading
             ? const CircularProgressIndicator(color: AppColors.doradoClaro)
             : ElevatedButton(
@@ -143,7 +143,7 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  // Helper para construir los campos de texto con el estilo Passport
+  // Helper para construir los campos de texto
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

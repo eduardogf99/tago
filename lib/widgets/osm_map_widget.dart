@@ -23,6 +23,7 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
   late final MapController _mapController;
   double _currentRotation = 0.0;
   bool _hasCenteredOnUser = false;
+  bool _isLoading = true; // Estado de carga
 
   LatLng? _currentLocation;
   double? _heading;
@@ -47,12 +48,19 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
         if (permission == LocationPermission.denied) return;
       }
 
-      // Obtener posición inicial rápida
-      Position position = await Geolocator.getCurrentPosition();
-      if (mounted) {
-        setState(() {
-          _currentLocation = LatLng(position.latitude, position.longitude);
-        });
+      if (permission == LocationPermission.deniedForever) return;
+
+      // Obtener posición inicial rápida con timeout
+      try {
+        Position position = await Geolocator.getCurrentPosition()
+            .timeout(const Duration(seconds: 5));
+        if (mounted) {
+          setState(() {
+            _currentLocation = LatLng(position.latitude, position.longitude);
+          });
+        }
+      } catch (e) {
+        debugPrint("Error o timeout obteniendo posición inicial: $e");
       }
 
       _positionStream = Geolocator.getPositionStream(
@@ -79,6 +87,12 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
       });
     } catch (e) {
       debugPrint("Error inicializando ubicación: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -121,6 +135,14 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.azulIntermedio,
+        ),
+      );
+    }
+
     return Stack(
       children: [
         FlutterMap(
@@ -161,7 +183,7 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                             angle: (_heading! * (math.pi / 180)),
                             child: Transform.translate(
                               offset: const Offset(0, -13),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.arrow_drop_up,
                                 size: 50,
                                 color: AppColors.azulStamps,
@@ -199,7 +221,6 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
           right: 20,
           child: Column(
             children: [
-              // Brújula para resetear rotación
               GestureDetector(
                 onTap: () {
                   _animatedMapMove(_mapController.camera.center, _mapController.camera.zoom, 0.0);
@@ -241,7 +262,6 @@ class OSMMapWidgetState extends State<OSMMapWidget> with TickerProviderStateMixi
                 ),
               ),
               const SizedBox(height: 10),
-              // Botón de mi ubicación
               GestureDetector(
                 onTap: () {
                   if (_currentLocation != null) {

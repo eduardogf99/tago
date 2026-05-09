@@ -14,7 +14,7 @@ class ImageHelper {
 
     await showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.azulOscuro, // Fondo del panel
+      backgroundColor: AppColors.azulOscuro,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -22,7 +22,6 @@ class ImageHelper {
         return SafeArea(
           child: Wrap(
             children: <Widget>[
-              // Indicador superior decorativo
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(top: 10, bottom: 5),
@@ -56,7 +55,7 @@ class ImageHelper {
                   Navigator.of(context).pop();
                 },
               ),
-              const SizedBox(height: 10), // Espacio extra al final
+              const SizedBox(height: 10),
             ],
           ),
         );

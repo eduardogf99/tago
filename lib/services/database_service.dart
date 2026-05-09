@@ -14,7 +14,7 @@ class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // --- MÉTODOS DE RESPALDO (Directo a Firestore) ---
+  // MÉTODOS DE RESPALDO ------------------------------------------------------------------------
 
   Future<UserModel?> _obtenerUsuarioFirestore(String uid) async {
     final doc = await _db.collection('usuarios').doc(uid).get();
@@ -31,7 +31,7 @@ class DatabaseService {
     return snapshot.docs.map((doc) => MapMarkerModel.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
 
-  // --- MARCADORES ---
+  // MARCADORES -----------------------------------------------------------------------------------------------------
 
   // Obtener todos los marcadores disponibles en el mapa
   Future<List<MapMarkerModel>> obtenerMarcadores() async {
@@ -68,10 +68,9 @@ class DatabaseService {
     }
   }
 
-  // Guardar un nuevo marcador
   Future<void> crearMarcador(String id, Map<String, dynamic> data) async {
     try {
-      // Intentar primero por la API (Backend centralizado)
+      // Intentar primero por la API
       final response = await http.post(
         Uri.parse('$_baseUrl/marcadores'),
         headers: {"Content-Type": "application/json"},
@@ -79,7 +78,7 @@ class DatabaseService {
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode != 201 && response.statusCode != 200) {
-        // Si la API falla explícitamente, intentamos respaldo directo
+        // Si la API falla, intentamos respaldo directo
         await _db.collection('marcadores').doc(id).set(data);
       }
     } catch (e) {
@@ -89,7 +88,6 @@ class DatabaseService {
     }
   }
 
-  // Reportar un marcador
   Future<void> reportarMarcador(String id) async {
     try {
       await _db.collection('marcadores').doc(id).set({
@@ -100,7 +98,7 @@ class DatabaseService {
     }
   }
 
-  // --- USUARIOS ---
+  // USUARIOS --------------------------------------------------------------------------------------------------------
 
   Future<List<UserModel>> obtenerTodosLosUsuarios() async {
     try {
@@ -148,7 +146,7 @@ class DatabaseService {
     }
   }
 
-  // --- ESCANEOS  ---
+  // ESCANEOS  ------------------------------------------------------------------------------------------------------
 
   // Traer todos los marcadores que el usuario ha desbloqueado
   Future<List<String>> obtenerEscaneosUsuario(String uid) async {
@@ -185,7 +183,7 @@ class DatabaseService {
 
   Future<void> registrarEscaneo(String uid, String tagoId) async {
     try {
-      // Llamamos al endpoint del backend que ya tiene programado el incremento
+      // Llamamos al endpoint del backend
       final response = await http.post(
         Uri.parse('$_baseUrl/usuarios/$uid/escaneos/$tagoId'),
         headers: {"Content-Type": "application/json"},
@@ -195,17 +193,16 @@ class DatabaseService {
         print("Escaneo registrado con éxito vía API");
       } else {
         print("Error en API: ${response.body}. Intentando respaldo...");
-        // Respaldo manual si la API devuelve error
+        // si la API devuelve error
         await _registrarEscaneoRespaldoDirecto(uid, tagoId);
       }
     } catch (e) {
       print("Error de red al registrar escaneo: $e");
-      // Si la API falla, intentamos el respaldo directo
+      // Si la API falla, intentamos esto
       await _registrarEscaneoRespaldoDirecto(uid, tagoId);
     }
   }
 
-// Mueve tu lógica actual aquí como plan B
   Future<void> _registrarEscaneoRespaldoDirecto(String uid, String tagoId) async {
     WriteBatch batch = _db.batch();
     DocumentReference usuarioRef = _db.collection('usuarios').doc(uid);
@@ -216,7 +213,7 @@ class DatabaseService {
       'tagoId': tagoId,
     });
 
-    // CORRECCIÓN: Se usa set con merge:true para asegurar que el documento se cree si no existe
+    // Se usa set con merge true para asegurar que el documento se crea si no existe
     batch.set(usuarioRef, {
       'totalEscaneos': FieldValue.increment(1),
     }, SetOptions(merge: true));
@@ -234,7 +231,7 @@ class DatabaseService {
 
   Future<void> eliminarTagoCompleto(String tagoId, String creadorId) async {
     try {
-      // Intentar borrado vía API para limpieza global de contadores y borrado de 'creados'
+      // Intentar borrado vía API para limpieza global de contadores y borrado de creados
       final response = await http.delete(
         Uri.parse('$_baseUrl/marcadores/$tagoId'),
       ).timeout(const Duration(seconds: 20));
@@ -245,20 +242,20 @@ class DatabaseService {
     } catch (e) {
       print("Error al eliminar tago vía API, ejecutando respaldo local: $e");
 
-      // Respaldo manual local: Borramos el marcador y su referencia en 'creados'
+      // Borramos el marcador y su referencia en 'creados'
       WriteBatch batch = _db.batch();
 
-      // 1. Borrar el marcador de la colección global
+      // Borrar el marcador de la colección global
       batch.delete(_db.collection('marcadores').doc(tagoId));
 
-      // 2. Borrar de la subcolección 'creados' del usuario autor
+      // Borrar de la subcolección creados del usuario creador
       batch.delete(_db.collection('usuarios').doc(creadorId).collection('creados').doc(tagoId));
 
       await batch.commit();
     }
   }
 
-  // --- SUBIDA DE IMÁGENES (Directo a Storage) ---
+  // SUBIDA DE IMÁGENES ----------------------------------------------------------------------------------
 
   Future<String> subirImagenPerfil(String uid, File imageFile) async {
     try {

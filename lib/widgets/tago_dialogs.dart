@@ -269,6 +269,7 @@ class TagoDialogs {
     required String scannedId,
     required bool esPrimerTagoDelPais,
     required String? codigoPais,
+    String? imagenUrl,
   }) {
     showDialog(
       context: context,
@@ -305,7 +306,39 @@ class TagoDialogs {
               "Has desbloqueado un nuevo sitio:",
               style: TextStyle(color: AppColors.blancoTexto),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
+
+            // Mostrar imagen del TaGo
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.doradoClaro,
+                  width: 2,
+                ),
+              ),
+              child: ClipOval(
+                child: (imagenUrl != null && imagenUrl.isNotEmpty)
+                    ? Image.network(
+                  imagenUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.image,
+                    size: 50,
+                    color: AppColors.azulClaro,
+                  ),
+                )
+                    : const Icon(
+                  Icons.image,
+                  size: 50,
+                  color: AppColors.azulClaro,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 15),
             Text(
               titulo,
               style: const TextStyle(
@@ -382,6 +415,7 @@ class TagoDialogs {
     required BuildContext context,
     required String titulo,
     required String scannedId,
+    String? imagenUrl,
   }) {
     showDialog(
       context: context,
@@ -419,7 +453,39 @@ class TagoDialogs {
               "Este TaGo ya está en tu colección:",
               style: TextStyle(color: AppColors.blancoTexto),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
+
+            // Mostrar imagen del TaGo
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.doradoClaro,
+                  width: 2,
+                ),
+              ),
+              child: ClipOval(
+                child: (imagenUrl != null && imagenUrl.isNotEmpty)
+                    ? Image.network(
+                  imagenUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.image,
+                    size: 50,
+                    color: AppColors.azulClaro,
+                  ),
+                )
+                    : const Icon(
+                  Icons.image,
+                  size: 50,
+                  color: AppColors.azulClaro,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 15),
             Text(
               titulo,
               style: const TextStyle(

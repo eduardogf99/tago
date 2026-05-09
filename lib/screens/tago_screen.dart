@@ -108,7 +108,6 @@ class _TagoScreenState extends State<TagoScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Contenedor principal estilo "Ficha"
             Container(
               padding: const EdgeInsets.all(20),
               child: Column(
