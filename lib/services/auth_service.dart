@@ -4,77 +4,33 @@ import '../models/user_model.dart';
 import 'database_service.dart';
 
 class AuthService {
-  // Instancias privadas
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseService _dbService = DatabaseService();
-  
-  // Client id qeu se pasa al json
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '1008380081377-fb1eln8kvg5dc0t0kvr4ggtuqrvheouh.apps.googleusercontent.com',
-  );
+  final FirebaseAuth _auth;
+  final DatabaseService _dbService;
+  final GoogleSignIn _googleSignIn;
 
-  // Stream para vigilar el estado del usuario
+  // Constructor con inyección de dependencias (usa las reales por defecto)
+  AuthService({
+    FirebaseAuth? auth,
+    DatabaseService? dbService,
+    GoogleSignIn? googleSignIn,
+  })  : _auth = auth ?? FirebaseAuth.instance,
+        _dbService = dbService ?? DatabaseService(),
+        _googleSignIn = googleSignIn ?? GoogleSignIn(
+          clientId: '1008380081377-fb1eln8kvg5dc0t0kvr4ggtuqrvheouh.apps.googleusercontent.com',
+        );
+
   Stream<User?> get userState => _auth.authStateChanges();
-
-  // Obtener el ID del usuario actual
   String? get currentUid => _auth.currentUser?.uid;
 
-  // Obtener los datos del usuario actual
   Future<UserModel?> getUserData() async {
     User? user = _auth.currentUser;
-    if (user != null) {
-      return await _dbService.obtenerUsuario(user.uid);
-    }
+    if (user != null) return await _dbService.obtenerUsuario(user.uid);
     return null;
   }
 
-  // Verifica si un nombre de usuario ya existe
   Future<bool> usuarioExiste(String usuario) async {
     final usuarios = await _dbService.obtenerTodosLosUsuarios();
     return usuarios.any((u) => u.usuario.toLowerCase() == usuario.toLowerCase());
-  }
-
-  // Registro con Email y Contraseña
-  Future<UserCredential> registrarUsuario({
-    required String email,
-    required String password,
-    required String usuario,
-    required String fechaNacimiento,
-  }) async {
-    // Verificar si el nombre de usuario ya existe
-    if (await usuarioExiste(usuario)) {
-      throw 'El nombre de usuario ya está en uso';
-    }
-
-    // Crear el usuario en Firebase Auth
-    UserCredential result = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    // Crear el documento usando nuestro servicio
-    UserModel nuevoUsuario = UserModel(
-      uid: result.user!.uid,
-      email: email,
-      usuario: usuario,
-      fechaNacimiento: fechaNacimiento,
-      isAdmin: false,
-    );
-
-    await _dbService.actualizarUsuario(nuevoUsuario.uid, nuevoUsuario.toMap());
-    return result;
-  }
-
-  // Inicio de Sesión con Email/Usuario
-  Future<void> iniciarSesion(String input, String password) async {
-    String email = input;
-    if (!input.contains('@')) {
-      final usuarios = await _dbService.obtenerTodosLosUsuarios();
-      final userMatch = usuarios.where((u) => u.usuario == input);
-      if (userMatch.isEmpty) throw 'Usuario no encontrado';
-      email = userMatch.first.email;
-    }
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   // Inicio de sesión con google
@@ -113,6 +69,42 @@ class AuthService {
       print("Error en Google Sign-In: $e");
       rethrow;
     }
+  }
+
+  Future<UserCredential> registrarUsuario({
+    required String email,
+    required String password,
+    required String usuario,
+    required String fechaNacimiento,
+  }) async {
+    if (await usuarioExiste(usuario)) throw 'El nombre de usuario ya está en uso';
+
+    UserCredential result = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+
+    UserModel nuevoUsuario = UserModel(
+      uid: result.user!.uid,
+      email: email,
+      usuario: usuario,
+      fechaNacimiento: fechaNacimiento,
+      isAdmin: false,
+    );
+
+    await _dbService.actualizarUsuario(nuevoUsuario.uid, nuevoUsuario.toMap());
+    return result;
+  }
+
+  Future<void> iniciarSesion(String input, String password) async {
+    String email = input;
+    if (!input.contains('@')) {
+      final usuarios = await _dbService.obtenerTodosLosUsuarios();
+      final userMatch = usuarios.where((u) => u.usuario == input);
+      if (userMatch.isEmpty) throw 'Usuario no encontrado';
+      email = userMatch.first.email;
+    }
+    await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   Future<void> cerrarSesion() async {
