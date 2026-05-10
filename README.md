@@ -138,3 +138,6 @@ Para la aplicación se ha utilizado el servicio Firebase, tanto para el almacén
 
 <img width="1536" height="1024" alt="ChatGPT Image 4 may 2026, 16_51_23" src="https://github.com/user-attachments/assets/599f3b32-e409-47aa-a99d-a7affc50f865" />
 
+//Realización de test//
+
+Para la comprobación de los test, utilizar el comando flutter test en la terminal.
