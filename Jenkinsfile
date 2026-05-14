@@ -12,7 +12,6 @@ pipeline {
                 echo "Iniciando pipeline de ${PROJECT_NAME}"
             }
         }
-
         stage('Clonar repositorio') {
             steps {
                 checkout scm
