@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:tfg/models/user_model.dart';
 import 'package:tfg/services/auth_service.dart';
 import 'package:tfg/services/database_service.dart';
@@ -36,12 +37,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // --- NUEVA FUNCIÓN DE EDICIÓN COMPLETA ---
+  // --- Función auxiliar para asegurar el formato dd-MM-yyyy en la vista ---
+  String _formatToVisualDate(String rawDate) {
+    try {
+
+      if (rawDate.contains('-') && rawDate.split('-')[0].length == 2) {
+        return rawDate;
+      }
+
+      DateTime parsed = DateTime.parse(rawDate);
+      return DateFormat('dd-MM-yyyy').format(parsed);
+    } catch (e) {
+
+      return rawDate;
+    }
+  }
+
+  // --- Editar perfil ---
   Future<void> _showEditProfileDialog(UserModel user) async {
     final TextEditingController userController = TextEditingController(text: user.usuario);
     final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
-    String selectedDate = user.fechaNacimiento;
-    _usernameError = null; // Reiniciar error al abrir
+
+    // Normalizamos la fecha antes de abrir el diálogo para que no renderice guiones invertidos
+    String selectedDate = _formatToVisualDate(user.fechaNacimiento);
+    _usernameError = null;
 
     return showDialog(
       context: context,
@@ -60,12 +79,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: InputDecoration(
                     labelText: 'Nombre de usuario',
                     labelStyle: TextStyle(color: AppColors.doradoClaro),
-                    errorText: _usernameError, // Aquí se muestra el mensaje debajo
+                    errorText: _usernameError,
                     enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.doradoClaro)),
                     focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.doradoClaro)),
                     errorStyle: const TextStyle(color: AppColors.error),
                   ),
-                  // Validador visual simple
                   validator: (value) {
                     if (value == null || value.isEmpty) return 'El nombre no puede estar vacío';
                     return null;
@@ -84,7 +102,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           initialDate: DateTime.now(),
                           firstDate: DateTime(1900),
                           lastDate: DateTime.now(),
-                          // Personalización de colores del picker para que pegue con tu diseño
                           builder: (context, child) => Theme(
                             data: Theme.of(context).copyWith(
                               colorScheme: ColorScheme.dark(
@@ -98,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                         if (picked != null) {
                           setDialogState(() {
-                            selectedDate = "${picked.toLocal()}".split(' ')[0];
+                            selectedDate = DateFormat('dd-MM-yyyy').format(picked);
                           });
                         }
                       },
@@ -116,14 +133,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.doradoClaro),
               onPressed: () async {
-                // 1. Validar campos básicos
                 if (!dialogFormKey.currentState!.validate()) return;
 
                 String nuevoUsuario = userController.text.trim();
 
-                // 2. Comprobación asíncrona de usuario
                 if (nuevoUsuario != user.usuario) {
-                  // Mostramos un estado de carga opcional o simplemente bloqueamos
                   bool existe = await _authService.usuarioExiste(nuevoUsuario);
                   if (existe) {
                     setDialogState(() {
@@ -133,7 +147,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   }
                 }
 
-                // 3. Si todo está bien, actualizamos
                 await _dbService.actualizarUsuario(user.uid, {
                   'usuario': nuevoUsuario,
                   'fechaNacimiento': selectedDate,
@@ -279,8 +292,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       style: TextStyle(color: AppColors.doradoClaro, fontSize: 20, fontWeight: FontWeight.bold),
                                     ),
                                     const SizedBox(height: 8),
+                                    const SizedBox(height: 8),
+                                    // Cambiado para aplicar el formateador visual dinámico
                                     Text(
-                                      user.fechaNacimiento,
+                                      _formatToVisualDate(user.fechaNacimiento),
                                       style: TextStyle(color: AppColors.doradoClaro.withOpacity(0.8), fontSize: 14),
                                     ),
                                     const SizedBox(height: 8),
@@ -304,7 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 25),
 
-                          FutureBuilder<int>( // contamos los creados
+                          FutureBuilder<int>(
                             future: _getCount(uid, 'creados'),
                             builder: (context, creadosSnapshot) {
                               String escaneados = user.totalEscaneos.toString();
@@ -401,7 +416,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                     ),
-                    // BOTÓN DE EDICIÓN EN LA ESQUINA
                     Positioned(
                       top: 10,
                       right: 25,

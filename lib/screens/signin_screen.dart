@@ -1,6 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:tfg/screens/login_screen.dart';
 import 'package:tfg/screens/main_screen.dart';
+import 'package:tfg/screens/terms_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 
 import '../theme/app_colors.dart';
@@ -139,7 +143,7 @@ class _SigninScreenState extends State<SigninScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: _loginGoogle,
-                      icon: const Icon(Icons.login),
+                      icon: const Icon(FontAwesomeIcons.google,),
                       label: const Text('CONTINUAR CON GOOGLE'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.doradoClaro,
@@ -177,12 +181,36 @@ class _SigninScreenState extends State<SigninScreen> {
                   _buildDatePicker(),
                   const SizedBox(height: 15),
 
+
+
                   Theme(
                     data: ThemeData(unselectedWidgetColor: AppColors.doradoClaro),
                     child: CheckboxListTile(
                       value: _acceptTerms,
                       onChanged: (value) => setState(() => _acceptTerms = value ?? false),
-                      title: const Text('Acepto los términos y condiciones', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      title: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          children: [
+                            const TextSpan(text: 'Acepto los '),
+                            TextSpan(
+                              text: 'términos y condiciones',
+                              style: const TextStyle(
+                                color: AppColors.doradoClaro,
+                                decoration: TextDecoration.underline,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const TermsScreen()),
+                                  );
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
                       controlAffinity: ListTileControlAffinity.leading,
                       activeColor: AppColors.doradoClaro,
                       checkColor: AppColors.azulOscuro,
@@ -295,9 +323,12 @@ class _SigninScreenState extends State<SigninScreen> {
             );
           },
         );
+
         if (pickedDate != null) {
           setState(() {
-            birthDateController.text = "${pickedDate.toLocal()}".split(' ')[0];
+            // fecha a dd-mm-yyyy
+            String formattedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
+            birthDateController.text = formattedDate;
           });
         }
       },

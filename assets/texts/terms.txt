@@ -1,0 +1,38 @@
+Última actualización: 18 de mayo de 2026
+
+Bienvenido a TaGo!. Antes de utilizar nuestra aplicación móvil, te rogamos que leas detenidamente los siguientes Términos y Condiciones de Uso. Al descargar, instalar y utilizar esta aplicación, aceptas quedar vinculado por este acuerdo. Si no estás de acuerdo con estos términos, no debes utilizar la aplicación.
+
+1. Información General y Titularidad
+La aplicación móvil TaGo! (en adelante, "la Aplicación") es una plataforma cuyo objetivo es la localización y escaneo de pegatinas NFC en el entorno físico real.
+La Aplicación es propiedad y está gestionada de forma conjunta por Eduardo Gregorio y Pablo Dies (en adelante, "los Titulares"), con correo electrónico de contacto: eduardo.gregorio.ferrer@gmail.com.
+
+2. Requisitos de Usuario y Registro
+Registro: Para acceder a las funciones de la Aplicación, el usuario debe registrarse creando una cuenta, permitiéndose el acceso y autenticación a través de servicios de terceros (Google). El usuario es responsable de mantener la confidencialidad de sus credenciales de acceso.
+
+Edad Mínima: La Aplicación está dirigida a usuarios mayores de 14 años. De acuerdo con la legislación española, los menores de 14 años no están autorizados a registrarse ni a facilitar datos personales sin el consentimiento expreso de sus padres o tutores legales.
+
+3. Propiedad Intelectual e Industrial
+Todo el código fuente, diseño gráfico, interfaces de usuario, logotipos, marcas, textos y la propia idea conceptual de TaGo! son propiedad exclusiva de los Titulares y están protegidos por las leyes de propiedad intelectual. Queda expresamente prohibida la reproducción, copia, distribución, modificación o ingeniería inversa de la Aplicación sin la autorización previa y por escrito de los Titulares.
+
+4. Contenido Generado por el Usuario y Moderación
+Licencia de Contenido: Al subir contenido a la Aplicación (textos, imágenes u otros datos asociados al escaneo de las pegatinas NFC), el usuario otorga a los Titulares una licencia gratuita y no exclusiva para mostrar dicho contenido dentro de la plataforma.
+
+Responsabilidad: El usuario es el único responsable del contenido que publique.
+
+Sistema de Reportes: La Aplicación cuenta con un sistema de reportes para que la comunidad notifique contenido inapropiado. Tras recibir un reporte, la decisión final de eliminar, modificar o mantener dicho contenido corresponderá única y exclusivamente al autor original del mismo. Los Titulares no realizan una moderación previa ni se hacen responsables de las opiniones o archivos subidos por los usuarios.
+
+5. Gratuidad y Modelo de Negocio
+La Aplicación es de descarga y uso 100% gratuito. No incluye compras integradas, anuncios publicitarios de terceros ni suscripciones de pago. Cualquier cambio futuro en el modelo de negocio será notificado debidamente a los usuarios.
+
+6. Exclusión de Responsabilidad (Garantías y Uso Físico)
+Funcionamiento Técnico: Los Titulares no garantizan que la Aplicación funcione de forma ininterrumpida, libre de errores o de "bugs", ni que el servidor esté siempre disponible. La Aplicación se proporciona "tal cual". Los Titulares se eximen de cualquier responsabilidad por daños y perjuicios derivados de fallos en el sistema o pérdidas de datos.
+
+Uso en el Mundo Real: Dado que la Aplicación requiere que el usuario busque y escanee pegatinas NFC en el mundo real, los Titulares no se hacen responsables de los accidentes, lesiones, invasión de propiedad privada o cualquier percance físico o legal que el usuario pueda sufrir o causar durante la búsqueda de dichas pegatinas. El usuario juega bajo su propia responsabilidad y riesgo.
+
+Naturaleza de la Información: La Aplicación no maneja información crítica (médica, financiera, etc.). Su propósito es estrictamente lúdico y de entretenimiento.
+
+7. Modificaciones de los Términos
+Los Titulares se reservan el derecho a modificar estos Términos y Condiciones en cualquier momento. La continuación en el uso de la Aplicación tras la publicación de los cambios constituirá la aceptación de los mismos.
+
+8. Legislación Aplicable y Jurisdicción
+Estos Términos y Condiciones se rigen por la legislación española. Para cualquier controversia que pueda surgir en relación con el uso de la Aplicación, las partes se someten a los Juzgados y Tribunales competentes del territorio español.

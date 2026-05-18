@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:intl/intl.dart'; // <-- IMPORTANTE: Añadimos intl para gestionar fechas aquí
 import '../models/user_model.dart';
 import 'database_service.dart';
 
@@ -54,11 +55,14 @@ class AuthService {
 
       // Si es un usuario nuevo, crear su ficha a través de API REST
       if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+        // Ponemos una fecha válida por defecto o una estandarizada en vez de texto plano libre
+        String fechaPorDefecto = DateFormat('dd-MM-yyyy').format(DateTime(2000, 1, 1));
+
         UserModel nuevoUsuario = UserModel(
           uid: userCredential.user!.uid,
           email: userCredential.user!.email ?? '',
           usuario: userCredential.user!.displayName ?? 'Usuario Google',
-          fechaNacimiento: 'No proporcionada',
+          fechaNacimiento: fechaPorDefecto, // <-- Cambiado para mantener coherencia de tipo fecha
           isAdmin: false,
         );
         await _dbService.actualizarUsuario(nuevoUsuario.uid, nuevoUsuario.toMap());
@@ -84,11 +88,18 @@ class AuthService {
       password: password,
     );
 
+
+    String fechaNormalizada = fechaNacimiento;
+    if (fechaNacimiento.contains('-') && fechaNacimiento.split('-')[0].length == 4) {
+      DateTime parsedDate = DateTime.parse(fechaNacimiento);
+      fechaNormalizada = DateFormat('dd-MM-yyyy').format(parsedDate);
+    }
+
     UserModel nuevoUsuario = UserModel(
       uid: result.user!.uid,
       email: email,
       usuario: usuario,
-      fechaNacimiento: fechaNacimiento,
+      fechaNacimiento: fechaNormalizada, // <-- Guardamos la fecha asegurando el formato correcto
       isAdmin: false,
     );
 

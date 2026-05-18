@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:tfg/screens/main_screen.dart';
 import 'package:tfg/services/auth_service.dart';
 
@@ -110,7 +111,7 @@ class _LoginFormState extends State<LoginForm> {
         if (!_isLoading) ...[
           OutlinedButton.icon(
             onPressed: _loginGoogle,
-            icon: const Icon(Icons.login),
+            icon: const Icon(FontAwesomeIcons.google,),
             label: const Text('ACCEDER CON GOOGLE'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),

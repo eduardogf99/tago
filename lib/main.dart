@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
@@ -17,6 +18,11 @@ Future<void> main() async {
   
   // Iniciamos la escucha de NFC en segundo plano desde su controlador especializado
   NfcController.initBackgroundListener(navigatorKey);
+
+  // Bloqueo de orientacion del movil
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   
   runApp(const MyApp());
 }
