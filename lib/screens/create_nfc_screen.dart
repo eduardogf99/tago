@@ -5,11 +5,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import '../controller/nfc_controller.dart';
 import '../services/auth_service.dart';
 import 'dart:typed_data';
 import '../services/database_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/image_helper.dart';
+
+
 
 class CreateNfcScreen extends StatefulWidget {
   final LatLng position;
@@ -30,13 +33,115 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
   final DatabaseService _dbService = DatabaseService();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  Future<void> _pickImage() async {
-    File? selectedImage = await ImageHelper.mostrarSelector(context);
-    if (selectedImage != null) {
-      setState(() {
-        _image = selectedImage;
-      });
+  // Variables de control para el estado del NFC
+  bool _nfcAvailable = false;
+  bool _isWritingProcessActive = false;
+  String _currentTagoId = '';
+  bool _dialogShowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAndPrepareNfc();
+  }
+
+  // Prepara el entorno NFC de forma segura
+  Future<void> _initAndPrepareNfc() async {
+    // 1. Pausamos el listener global de fondo para evitar conflictos
+    await NfcController.pauseBackgroundListener();
+
+    // 2. Comprobamos disponibilidad de hardware
+    _nfcAvailable = await NfcManager.instance.isAvailable();
+    if (!_nfcAvailable) return;
+
+    // 3. Dejamos el lector activo de forma persistente en esta pantalla
+    NfcManager.instance.startSession(
+        onDiscovered: (NfcTag tag) async {
+          // Solo actuamos si el usuario ha pulsado el botón de confirmar el formulario
+          if (!_isWritingProcessActive) return;
+
+          var ndef = Ndef.from(tag);
+
+          // Validación 1: ¿Soporta formato NDEF?
+          if (ndef == null) {
+            _closeNfcWaitingDialog();
+            _isWritingProcessActive = false;
+            _showSnackBar('Esta etiqueta no es compatible con el formato requerido', Colors.orange);
+            return;
+          }
+
+          // Validación 2: ¿Está bloqueada en escritura? (Tu petición)
+          if (!ndef.isWritable) {
+            _closeNfcWaitingDialog();
+            _isWritingProcessActive = false;
+            _showSnackBar('Error: Este NFC ya está bloqueado en modo de solo lectura', Colors.red);
+            return;
+          }
+
+          // Si todo es correcto, procedemos a grabar el ID generado previamente
+          NdefMessage message = NdefMessage([
+            NdefRecord.createText(_currentTagoId),
+            NdefRecord.createExternal('android.com', 'pkg', Uint8List.fromList('com.example.tfg'.codeUnits)),
+          ]);
+
+          try {
+            // Grabamos datos
+            await ndef.write(message);
+
+            // Bloqueamos el hardware irreversiblemente (Quitado en desarrollo si es necesario)
+            await ndef.writeLock();
+
+            _closeNfcWaitingDialog();
+            _isWritingProcessActive = false;
+
+            // Procedemos con la sincronización al servidor
+            if (mounted) {
+              await _processTagoCreation(
+                  _currentTagoId,
+                  _titleController.text.trim(),
+                  _descriptionController.text.trim(),
+                  _hintController.text.trim()
+              );
+            }
+          } catch (e) {
+            _closeNfcWaitingDialog();
+            _isWritingProcessActive = false;
+            _showSnackBar('Error al grabar o bloquear el NFC: $e', Colors.red);
+          }
+        },
+        onError: (error) async {
+          debugPrint("Error persistente en pantalla de creación: $error");
+        }
+    );
+  }
+
+  // Disparador del botón principal
+  Future<void> _handleCreateTaGo() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Si el dispositivo no tiene NFC activo, salta la simulación/aviso
+    if (!_nfcAvailable) {
+      _showSimulationDialog();
+      return;
     }
+
+    // Preparamos los datos de sesión de escritura
+    _currentTagoId = const Uuid().v4();
+    _isWritingProcessActive = true;
+
+    // Mostramos el aviso visual para que acerquen el tag
+    _showNfcWaitingDialog();
+  }
+
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   Future<Map<String, String>> _getLocationData(double lat, double lon) async {
@@ -85,114 +190,81 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
 
     try {
       await _saveToBackend(tagoId, title, description, hint, _image);
-      
+
       if (mounted) {
-        Navigator.pop(context);
-        
-        // Paequeño delay para asegurar que la navegación no choca con el SnackBar
-        Future.delayed(Duration.zero, () {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('TaGo creado con éxito'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.pop(context);
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context); // Cierra el diálogo de sincronización
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('TaGo creado con éxito'),
+            backgroundColor: Colors.green,
+          ),
         );
+        Navigator.pop(context); // Regresa a la pantalla anterior del mapa/lista
       }
-    }
-  }
-
-  Future<void> _handleCreateTaGo() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final String title = _titleController.text.trim();
-    final String description = _descriptionController.text.trim();
-    final String hint = _hintController.text.trim();
-    String tagoId = const Uuid().v4();
-
-    try {
-      bool isAvailable = await NfcManager.instance.isAvailable();
-      if (!isAvailable) {
-        _showSimulationDialog(tagoId, title, description, hint);
-        return;
-      }
-
-      _showNfcWaitingDialog();
-      
-      await NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-        var ndef = Ndef.from(tag);
-        if (ndef == null || !ndef.isWritable) {
-          await NfcManager.instance.stopSession(errorMessage: "Etiqueta no válida");
-          if (mounted) Navigator.pop(context);
-          return;
-        }
-
-        NdefMessage message = NdefMessage([
-          NdefRecord.createText(tagoId),
-          NdefRecord.createExternal('android.com', 'pkg', Uint8List.fromList('com.example.tfg'.codeUnits)),
-        ]);
-
-        try {
-          await ndef.write(message);
-          await NfcManager.instance.stopSession();
-          
-          if (mounted) {
-            Navigator.pop(context);
-            // subida a base de datos
-            await _processTagoCreation(tagoId, title, description, hint);
-          }
-        } catch (e) {
-          await NfcManager.instance.stopSession();
-          if (mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error NFC: $e")));
-          }
-        }
-      });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
+      if (mounted) {
+        Navigator.pop(context);
+        _showSnackBar('Error al guardar: $e', Colors.red);
+      }
     }
   }
 
-  void _showSimulationDialog(String tagoId, String title, String description, String hint) {
+  Future<void> _pickImage() async {
+    File? selectedImage = await ImageHelper.mostrarSelector(context);
+    if (selectedImage != null) {
+      setState(() {
+        _image = selectedImage;
+      });
+    }
+  }
+
+  void _showSimulationDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Hardware NFC no detectado"),
-        content: const Text("Parece que su dispositivo no tiene activada la opción de NFC"),
+        content: const Text("Parece que su dispositivo no tiene activada la opción de NFC o no dispone de ella."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Entendido")),
         ],
       ),
     );
   }
 
   void _showNfcWaitingDialog() {
+    _dialogShowing = true;
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => const AlertDialog(
-        title: Text("Acerca la pegatina NFC"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.nfc, size: 50, color: Colors.blue),
-            SizedBox(height: 10),
-            Text("Esperando etiqueta para grabar el ID..."),
-          ],
+      builder: (context) => PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) {
+            _isWritingProcessActive = false; // Cancela la escritura si cierran el modal tocando fuera
+            _dialogShowing = false;
+          }
+        },
+        child: const AlertDialog(
+          title: Text("Acerca la pegatina NFC"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.nfc, size: 50, color: Colors.blue),
+              SizedBox(height: 10),
+              Text("Esperando etiqueta para grabar y bloquear el ID..."),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _closeNfcWaitingDialog() {
+    if (_dialogShowing && mounted) {
+      Navigator.pop(context);
+      _dialogShowing = false;
+    }
   }
 
   Future<void> _saveToBackend(String id, String title, String description, String hint, File? imageFile) async {
@@ -224,7 +296,6 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
       'ultimoEscaneo': DateTime.now().toIso8601String(),
     };
 
-    // usamos Future.wait para asegurar que ambas escrituras terminan
     await Future.wait([
       _dbService.crearMarcador(id, tagoData),
       _dbService.registrarTagoCreado(uid, id),
@@ -236,9 +307,9 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     return Scaffold(
       backgroundColor: AppColors.azulOscuro,
       appBar: AppBar(
-        foregroundColor: AppColors.doradoClaro,
-        backgroundColor: AppColors.azulOscuro,
-        title: const Text('CREAR TAGO', style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2),)
+          foregroundColor: AppColors.doradoClaro,
+          backgroundColor: AppColors.azulOscuro,
+          title: const Text('CREAR TAGO', style: TextStyle(color: AppColors.doradoClaro, fontWeight: FontWeight.bold, letterSpacing: 2),)
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -260,12 +331,10 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 decoration: InputDecoration(
                   hintStyle: const TextStyle(color: AppColors.azulStamps),
                   hintText: 'Escribe un título', border: const OutlineInputBorder(),
-                  // Borde cuando NO está seleccionado
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
                   ),
-                  // Borde cuando haces clic
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
@@ -289,17 +358,17 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                     ),
                     child: _image != null
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(120),
-                            child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
-                          )
+                      borderRadius: BorderRadius.circular(120),
+                      child: Image.file(_image!, fit: BoxFit.cover, width: double.infinity),
+                    )
                         : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_a_photo, size: 50, color: AppColors.azulClaro),
-                              SizedBox(height: 8),
-                              Text('Pulsa para añadir una imagen', style: TextStyle(color: AppColors.azulClaro)),
-                            ],
-                          ),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo, size: 50, color: AppColors.azulClaro),
+                        SizedBox(height: 8),
+                        Text('Pulsa para añadir una imagen', style: TextStyle(color: AppColors.azulClaro)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -313,12 +382,10 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 decoration: InputDecoration(
                   hintStyle: const TextStyle(color: AppColors.azulStamps),
                   hintText: 'Escribe una breve descripción', border: const OutlineInputBorder(),
-                  // Borde cuando NO está seleccionado
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
                   ),
-                  // Borde cuando haces clic
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
@@ -336,12 +403,10 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                 decoration: InputDecoration(
                   hintStyle: const TextStyle(color: AppColors.azulStamps),
                   hintText: 'Escribe una pista para encontrarlo', border: const OutlineInputBorder(),
-                  // Borde cuando NO está seleccionado
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.azulStamps, width: 1.5),
                   ),
-                  // Borde cuando haces clic
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: const BorderSide(color: AppColors.doradoClaro, width: 2.0),
@@ -364,7 +429,7 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
                   child: const Text('Crear TaGo', style: TextStyle(fontSize: 16)),
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -377,6 +442,14 @@ class _CreateNfcScreenState extends State<CreateNfcScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _hintController.dispose();
+
+    // Al salir de la pantalla matamos la sesión de escritura y reactivamos el listener global
+    NfcManager.instance.stopSession().then((_) {
+      NfcController.resumeBackgroundListener();
+    }).catchError((_) {
+      NfcController.resumeBackgroundListener();
+    });
+
     super.dispose();
   }
 }
